@@ -1,0 +1,21 @@
+domain: specialty-coffee
+name: "Specialty Coffee"
+description: >
+  Brewing heuristics, recipe design, extraction control, and cup evaluation.
+
+freshness_sensitivity: low
+
+related_domains: []
+
+skills: []
+
+reading_order:
+  bootstrap:
+    - _crystal/seed.md
+    - _crystal/principles.md
+
+crystal:
+  seed: _crystal/seed.md
+  principles: _crystal/principles.md
+  graph: _crystal/graph.yaml
+  persona: _crystal/persona.md

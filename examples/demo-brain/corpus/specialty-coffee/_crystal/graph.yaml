@@ -1,0 +1,44 @@
+nodes:
+  extraction:
+    seed: "Extraction is the amount of soluble coffee material pulled into the cup."
+    connections:
+      - target: grind-size
+        weight: 0.9
+        relationship: "enabled-by"
+      - target: brew-time
+        weight: 0.85
+        relationship: "constrained-by"
+
+  grind-size:
+    seed: "Grind size is the fastest lever for correcting flavor."
+    connections:
+      - target: extraction
+        weight: 0.9
+        relationship: "enables"
+      - target: consistency
+        weight: 0.8
+        relationship: "requires"
+
+  brew-time:
+    seed: "Contact time changes how much flavor is extracted from the grounds."
+    connections:
+      - target: extraction
+        weight: 0.85
+        relationship: "enables"
+
+  consistency:
+    seed: "Repeatable recipes make flavor adjustments meaningful."
+    connections:
+      - target: extraction
+        weight: 0.7
+        relationship: "grounds"
+      - target: brewing-log
+        weight: 0.8
+        relationship: "enabled-by"
+
+  brewing-log:
+    seed: "A simple brew log preserves what changed and what improved."
+    connections:
+      - target: consistency
+        weight: 0.8
+        relationship: "enables"

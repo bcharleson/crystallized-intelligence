@@ -1,0 +1,75 @@
+brain:
+  name: "Example Brain"
+  version: "1.0.0"
+  description: >
+    A Crystallized Intelligence brain that compiles domain expertise into
+    agent-readable knowledge layers.
+  framework_version: "1.0.0"
+
+  maintainers:
+    - name: "Your Name"
+      role: owner
+
+  domains:
+    - id: example-domain
+      name: "Example Domain"
+      description: "Replace this with your domain description"
+      maturity: developing
+
+  quality:
+    source_weights:
+      first_party: 1.0
+      original_framework: 1.0
+      proprietary_insight: 1.0
+      lived_experience: 1.0
+      book: 1.0
+      academic_paper: 1.0
+      official_docs: 1.0
+      specification: 1.0
+      conference_talk: 0.85
+      workshop: 0.85
+      whitepaper: 0.85
+      technical_report: 0.85
+      tutorial: 0.70
+      course: 0.70
+      technical_blog: 0.70
+      case_study: 0.70
+      podcast: 0.55
+      interview: 0.55
+      youtube_video: 0.55
+      newsletter: 0.55
+      social_media: 0.35
+      forum_post: 0.35
+      tweet_thread: 0.35
+      reddit_comment: 0.35
+
+    override_rules:
+      - if: { author_authority: "owner" }
+        weight_boost: 0.25
+      - if: { source_type: "first_party" }
+        weight_boost: 0.25
+
+    require_provenance: true
+
+    auto_stale_days:
+      high: 90
+      medium: 180
+      low: 365
+
+  crystal:
+    layers:
+      - name: seed
+        target_tokens: 200
+        description: "Domain DNA — core principles and decision heuristics"
+      - name: principles
+        target_tokens: 2000
+        description: "Compressed rules, frameworks, and relationships"
+      - name: knowledge
+        target_tokens: 20000
+        description: "Curated guides, references, and case studies"
+      - name: sources
+        target_tokens: 200000
+        description: "Raw or lightly processed source material"
+      - name: raw
+        target_tokens: null
+        description: "Unprocessed source data"

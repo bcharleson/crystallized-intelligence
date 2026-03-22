@@ -1,0 +1,45 @@
+brain:
+  name: "Specialty Coffee Demo Brain"
+  version: "1.0.0"
+  description: >
+    Public-safe example brain showing how to compile a domain into multiple
+    layers for agents and humans.
+  framework_version: "1.0.0"
+
+  maintainers:
+    - name: "Crystallized Intelligence Demo"
+      role: owner
+
+  domains:
+    - id: specialty-coffee
+      name: "Specialty Coffee"
+      description: "Brewing heuristics, extraction basics, and brew workflow"
+      maturity: demo
+
+  quality:
+    source_weights:
+      first_party: 1.0
+      original_framework: 1.0
+      tutorial: 0.7
+      official_docs: 1.0
+      youtube_video: 0.55
+    require_provenance: true
+    auto_stale_days:
+      high: 90
+      medium: 180
+      low: 365
+
+  crystal:
+    layers:
+      - name: seed
+        target_tokens: 200
+        description: "Domain DNA"
+      - name: principles
+        target_tokens: 2000
+        description: "Compressed frameworks and rules"
+      - name: knowledge
+        target_tokens: 20000
+        description: "Curated knowledge"
+      - name: sources
+        target_tokens: 200000
+        description: "Raw sources"

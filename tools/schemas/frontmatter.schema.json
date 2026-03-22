@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Crystallized Intelligence — Document Frontmatter",
+  "description": "Metadata schema for all documents in a Brain corpus. Lives in YAML frontmatter at the top of every markdown file.",
+  "type": "object",
+  "required": ["title", "content_type", "created"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Human-readable document title"
+    },
+    "id": {
+      "type": "string",
+      "description": "Globally unique, stable document ID (e.g., 'kb-cold-email-pvp-framework')",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "content_type": {
+      "type": "string",
+      "enum": ["knowledge", "source", "example", "book", "book_chapter", "book_concept", "skill"],
+      "description": "What kind of content this is"
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "Date this document was created in the brain (ISO 8601)"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of last substantive update"
+    },
+
+    "source": {
+      "type": "object",
+      "description": "Provenance — where this knowledge came from",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "first_party", "original_framework", "proprietary_insight", "lived_experience",
+            "book", "academic_paper", "official_docs", "specification",
+            "conference_talk", "workshop", "whitepaper", "technical_report",
+            "tutorial", "course", "technical_blog", "case_study",
+            "podcast", "interview", "youtube_video", "newsletter",
+            "social_media", "forum_post", "tweet_thread", "reddit_comment"
+          ],
+          "description": "Type of original source"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the original source"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the original source (if different from document title)"
+        },
+        "author": {
+          "type": "string",
+          "description": "Author or creator name"
+        },
+        "author_authority": {
+          "type": "string",
+          "enum": ["owner", "creator", "academic", "practitioner", "educator", "journalist", "enthusiast", "unknown"],
+          "description": "Authority level of the author in this domain. 'owner' = brain owner's original knowledge (highest)."
+        },
+        "organization": {
+          "type": "string",
+          "description": "Publishing or affiliated organization"
+        },
+        "published": {
+          "type": "string",
+          "format": "date",
+          "description": "Original publication date"
+        },
+        "retrieved": {
+          "type": "string",
+          "format": "date",
+          "description": "Date the content was retrieved/captured"
+        },
+        "isbn": {
+          "type": "string",
+          "description": "ISBN for book sources"
+        },
+        "doi": {
+          "type": "string",
+          "description": "DOI for academic papers"
+        },
+        "license": {
+          "type": ["string", "null"],
+          "description": "Content license (CC-BY, MIT, proprietary, fair-use, etc.)"
+        }
+      }
+    },
+
+    "quality": {
+      "type": "object",
+      "description": "Trust and quality signals",
+      "properties": {
+        "source_tier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Quality tier: 0 = first-party/original (highest), 1 = books/papers, 2 = talks/workshops, 3 = tutorials/blogs, 4 = podcasts/videos, 5 = social media"
+        },
+        "verification": {
+          "type": "string",
+          "enum": ["unverified", "self_verified", "community_verified", "expert_verified", "canonical"],
+          "description": "Verification status"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Confidence in accuracy of this content"
+        },
+        "review_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of peer reviews"
+        },
+        "last_reviewed": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Date of most recent review"
+        },
+        "reviewed_by": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of reviewer identifiers"
+        }
+      }
+    },
+
+    "freshness": {
+      "type": "object",
+      "description": "How quickly this knowledge ages",
+      "properties": {
+        "sensitivity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "low = evergreen (365d), medium = semi-stable (180d), high = fast-changing (90d)"
+        },
+        "valid_until": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Explicit expiry date (null if no known expiry)"
+        },
+        "staleness_signal": {
+          "type": ["string", "null"],
+          "description": "What event would make this stale? e.g., 'new Claude model release'"
+        }
+      }
+    },
+
+    "domain": {
+      "type": "string",
+      "description": "Primary domain this content belongs to"
+    },
+    "domains": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "All domains this content is relevant to"
+    },
+    "subdomain": {
+      "type": "string",
+      "description": "Optional finer classification within the domain"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Free-form tags for searchability"
+    },
+    "knowledge_type": {
+      "type": "string",
+      "enum": ["fundamental", "technique", "reference", "case_study", "opinion"],
+      "description": "Category of knowledge (for Layer 2 content)"
+    },
+
+    "crystal_layer": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4,
+      "description": "Which crystallization layer: 4=seed, 3=principles, 2=knowledge, 1=sources, 0=raw"
+    },
+
+    "contributed_by": {
+      "type": "string",
+      "description": "Who added this to the brain (agent name or 'human')"
+    },
+
+    "processing": {
+      "type": "object",
+      "description": "Processing pipeline status",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["raw", "processing", "processed", "verified"],
+          "description": "Current processing state"
+        },
+        "pipeline": {
+          "type": "string",
+          "description": "Which pipeline produced this (e.g., 'transcript-to-knowledge')"
+        },
+        "source_ref": {
+          "type": "string",
+          "description": "Path to the source document this was derived from"
+        },
+        "processing_notes": {
+          "type": "string",
+          "description": "Free-form notes about the processing"
+        }
+      }
+    },
+
+    "related": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to related documents in the brain"
+    },
+
+    "reading_status": {
+      "type": "string",
+      "enum": ["completed", "reference", "in_progress"],
+      "description": "For books: whether the brain owner has read it"
+    }
+  }
+}
