@@ -35,6 +35,10 @@ env/
 # (this repo contains only the framework and a sanitized demo brain)
 # Your private brain lives in a separate directory — keep it that way.
 
+# Local agent context (may reference private repos — never commit)
+CLAUDE.md
+MANIFEST.md
+
 # Logs
 *.log
 run.log

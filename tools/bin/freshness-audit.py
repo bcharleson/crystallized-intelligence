@@ -27,7 +27,8 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+BRAIN_ROOT = DEFAULT_BRAIN_ROOT
 CORPUS_DIR = BRAIN_ROOT / "corpus"
 
 # Freshness sensitivity is configured per domain in corpus/{domain}/_domain.yaml
@@ -223,7 +224,7 @@ def format_text(results: list[dict], stale_only: bool) -> str:
     lines.append("\nBy domain:")
     for domain in sorted(domains):
         d = domains[domain]
-        sens = DOMAIN_SENSITIVITY.get(domain, "low")
+        sens = get_domain_sensitivity(domain)
         lines.append(
             f"  {domain:20s} {d['total']:3d} total, "
             f"{d['stale']:3d} stale, {d['no_date']:3d} no date  "
@@ -279,10 +280,16 @@ def format_markdown(results: list[dict]) -> str:
 
 
 def main():
+    global BRAIN_ROOT, CORPUS_DIR
+
     parser = argparse.ArgumentParser(description="Audit corpus freshness")
     parser.add_argument("file", nargs="?", help="Specific file to audit")
     parser.add_argument("--domain", help="Audit a specific domain")
     parser.add_argument("--all", action="store_true", help="Audit all corpus files")
+    parser.add_argument(
+        "--brain-root",
+        help="Brain root directory containing corpus/ (defaults to repository root)",
+    )
     parser.add_argument("--stale-only", action="store_true",
                         help="Only show stale documents")
     parser.add_argument("--format", choices=["text", "markdown"], default="text",
@@ -290,6 +297,16 @@ def main():
     parser.add_argument("--exit-code", action="store_true",
                         help="Exit 1 if any stale documents found")
     args = parser.parse_args()
+
+    if args.brain_root:
+        BRAIN_ROOT = Path(args.brain_root).expanduser().resolve()
+        CORPUS_DIR = BRAIN_ROOT / "corpus"
+        _SENSITIVITY_CACHE.clear()
+
+    if not args.file:
+        if not CORPUS_DIR.exists():
+            print(f"Error: corpus directory not found at {CORPUS_DIR}", file=sys.stderr)
+            sys.exit(1)
 
     # Collect files
     files = []

@@ -15,6 +15,10 @@ brain:
       name: "Specialty Coffee"
       description: "Brewing heuristics, extraction basics, and brew workflow"
       maturity: demo
+    - id: b2b-discovery
+      name: "B2B Discovery"
+      description: "Synthetic sales fundamentals — ICP, qualification, discovery"
+      maturity: demo
 
   quality:
     source_weights:

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "crystallized-intelligence": {
+      "command": "python3",
+      "args": [
+        "/absolute/path/to/crystallized-intelligence/tools/bin/brain-mcp.py"
+      ],
+      "env": {
+        "BRAIN_ROOT": "/absolute/path/to/your-brain-or/examples/demo-brain"
+      }
+    }
+  }
+}

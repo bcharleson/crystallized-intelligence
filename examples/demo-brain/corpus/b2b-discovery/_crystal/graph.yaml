@@ -1,0 +1,44 @@
+nodes:
+  icp:
+    seed: "Ideal customer profile defines who is worth a discovery call."
+    connections:
+      - target: qualification
+        weight: 0.95
+        relationship: "feeds"
+      - target: discovery-call
+        weight: 0.85
+        relationship: "constrains"
+
+  qualification:
+    seed: "BANT-style signals decide advance, nurture, or disqualify."
+    connections:
+      - target: icp
+        weight: 0.9
+        relationship: "grounded-in"
+      - target: deal-review
+        weight: 0.8
+        relationship: "informs"
+
+  discovery-call:
+    seed: "Problem → impact → process → timeline before any demo."
+    connections:
+      - target: qualification
+        weight: 0.9
+        relationship: "produces"
+      - target: call-notes
+        weight: 0.85
+        relationship: "enabled-by"
+
+  call-notes:
+    seed: "Structured notes make pipeline reviews honest."
+    connections:
+      - target: deal-review
+        weight: 0.9
+        relationship: "feeds"
+
+  deal-review:
+    seed: "Weekly deal review applies rubric to every open opportunity."
+    connections:
+      - target: qualification
+        weight: 0.75
+        relationship: "re-checks"

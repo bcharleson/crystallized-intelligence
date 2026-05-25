@@ -2,7 +2,7 @@
 """
 classify.py — Auto-classify documents with quality metadata.
 
-Reads files in the corpus and enriches their YAML frontmatter with:
+Reads files in the corpus and reports suggested YAML frontmatter fields:
   - source_tier (0-5) based on source type
   - freshness sensitivity based on domain
   - confidence based on word count and structure
@@ -12,8 +12,8 @@ Uses heuristics only — no LLM calls, no external dependencies.
 
 Usage:
   python tools/bin/classify.py corpus/my-domain/knowledge/some-article.md
-  python tools/bin/classify.py --domain my-domain           # All files in domain
-  python tools/bin/classify.py --all                         # All corpus files
+  python tools/bin/classify.py --domain my-domain --brain-root ~/my-brain
+  python tools/bin/classify.py --all --brain-root ~/my-brain
   python tools/bin/classify.py --all --dry-run               # Preview changes
 """
 
@@ -23,7 +23,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
-BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+BRAIN_ROOT = DEFAULT_BRAIN_ROOT
 CORPUS_DIR = BRAIN_ROOT / "corpus"
 
 # Source type → tier mapping
@@ -221,9 +222,17 @@ def classify_file(filepath: Path) -> dict:
     return suggestions
 
 
+def _display_path(filepath: Path) -> Path:
+    """Path for display — relative to brain root when possible."""
+    try:
+        return filepath.relative_to(BRAIN_ROOT)
+    except ValueError:
+        return filepath
+
+
 def print_classification(filepath: Path, suggestions: dict, verbose: bool = True):
     """Print classification results."""
-    rel = filepath.relative_to(BRAIN_ROOT)
+    rel = _display_path(filepath)
     if verbose:
         print(f"\n  {rel}")
         print(f"    domain: {suggestions['domain']}")
@@ -246,16 +255,31 @@ def print_classification(filepath: Path, suggestions: dict, verbose: bool = True
 
 
 def main():
+    global BRAIN_ROOT, CORPUS_DIR
+
     parser = argparse.ArgumentParser(
         description="Auto-classify corpus documents with quality metadata"
     )
     parser.add_argument("file", nargs="?", help="Specific file to classify")
     parser.add_argument("--domain", help="Classify all files in a domain")
     parser.add_argument("--all", action="store_true", help="Classify all corpus files")
+    parser.add_argument(
+        "--brain-root",
+        help="Brain root directory containing corpus/ (defaults to repository root)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--summary", action="store_true", help="Show summary statistics")
     args = parser.parse_args()
+
+    if args.brain_root:
+        BRAIN_ROOT = Path(args.brain_root).expanduser().resolve()
+        CORPUS_DIR = BRAIN_ROOT / "corpus"
+        _FRESHNESS_CACHE.clear()
+
+    if not CORPUS_DIR.exists():
+        print(f"Error: corpus directory not found at {CORPUS_DIR}", file=sys.stderr)
+        sys.exit(1)
 
     if not args.file and not args.domain and not args.all:
         parser.error("Specify a file, --domain, or --all")

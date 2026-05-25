@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-demo-brain:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        domain: [specialty-coffee, b2b-discovery]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify (${{ matrix.domain }})
+        run: python tools/bin/verify.py --domain ${{ matrix.domain }} --brain-root examples/demo-brain
+
+      - name: Classify (${{ matrix.domain }})
+        run: python tools/bin/classify.py --domain ${{ matrix.domain }} --summary --brain-root examples/demo-brain
+
+      - name: Brain bootstrap (${{ matrix.domain }})
+        run: python tools/bin/brain.py bootstrap ${{ matrix.domain }} --brain-root examples/demo-brain
+
+      - name: Brain expand (${{ matrix.domain }})
+        run: |
+          QUERY=grind
+          if [ "${{ matrix.domain }}" = "b2b-discovery" ]; then QUERY=qualify; fi
+          python tools/bin/brain.py expand ${{ matrix.domain }} \
+            --query "$QUERY" \
+            --max-tokens 4000 \
+            --max-tier 3 \
+            --brain-root examples/demo-brain
+
+      - name: Freshness audit (${{ matrix.domain }})
+        run: python tools/bin/freshness-audit.py --domain ${{ matrix.domain }} --brain-root examples/demo-brain

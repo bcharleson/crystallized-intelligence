@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Generate MANIFEST.md — an auto-generated index of all files in tofu-brain.
+Generate MANIFEST.md — an auto-generated index of a brain repository.
 Agents and humans can scan this to find relevant content quickly.
 """
 
+import argparse
 import os
 from datetime import datetime
 from pathlib import Path
 
-BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 
 SKIP_DIRS = {".git", ".github", "__pycache__", ".vscode", ".cursor"}
 SKIP_FILES = {".DS_Store", ".gitignore"}
@@ -41,10 +42,30 @@ def format_size(size_bytes: int) -> str:
         return f"{size_bytes / (1024 * 1024):.1f}M"
 
 
-def build_manifest():
+def resolve_brain_root(explicit: str | None) -> Path:
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    env = os.environ.get("BRAIN_ROOT")
+    if env:
+        return Path(env).expanduser().resolve()
+    return DEFAULT_BRAIN_ROOT
+
+
+def brain_title(brain_root: Path) -> str:
+    brain_yaml = brain_root / "brain.yaml"
+    if brain_yaml.is_file():
+        for line in brain_yaml.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("name:"):
+                name = line.split(":", 1)[1].strip().strip('"').strip("'")
+                if name:
+                    return name
+    return brain_root.name
+
+
+def build_manifest(brain_root: Path):
     """Build the MANIFEST.md content."""
     lines = []
-    lines.append("# MANIFEST — tofu-brain File Index")
+    lines.append(f"# MANIFEST — {brain_title(brain_root)} File Index")
     lines.append("")
     lines.append(f"Auto-generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     lines.append("")
@@ -54,7 +75,7 @@ def build_manifest():
 
     # Walk top-level directories in order
     top_dirs = sorted(
-        [d for d in BRAIN_ROOT.iterdir() if d.is_dir() and d.name not in SKIP_DIRS],
+        [d for d in brain_root.iterdir() if d.is_dir() and d.name not in SKIP_DIRS],
         key=lambda d: d.name
     )
 
@@ -70,7 +91,7 @@ def build_manifest():
                 if fname in SKIP_FILES:
                     continue
                 fpath = Path(root) / fname
-                rel = fpath.relative_to(BRAIN_ROOT)
+                rel = fpath.relative_to(brain_root)
                 size = fpath.stat().st_size
                 words = count_words(fpath) if fpath.suffix in (".md", ".txt", ".json") else 0
                 files.append((str(rel), size, words))
@@ -114,8 +135,19 @@ def build_manifest():
 
 
 def main():
-    manifest = build_manifest()
-    manifest_path = BRAIN_ROOT / "MANIFEST.md"
+    parser = argparse.ArgumentParser(description="Generate MANIFEST.md for a brain repo")
+    parser.add_argument(
+        "--brain-root",
+        help="Brain directory (default: BRAIN_ROOT env or framework root)",
+    )
+    args = parser.parse_args()
+    brain_root = resolve_brain_root(args.brain_root)
+    if not (brain_root / "brain.yaml").is_file():
+        print(f"Error: no brain.yaml at {brain_root}", flush=True)
+        raise SystemExit(1)
+
+    manifest = build_manifest(brain_root)
+    manifest_path = brain_root / "MANIFEST.md"
     manifest_path.write_text(manifest, encoding="utf-8")
     print(f"Generated: {manifest_path}")
     print(f"Size: {format_size(len(manifest.encode()))}")

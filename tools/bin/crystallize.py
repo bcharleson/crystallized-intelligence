@@ -16,10 +16,10 @@ Also generates:
   persona.md   — Pre-compiled expert persona for agent system prompts
 
 Usage:
-  python tools/bin/crystallize.py --domain cold-email
-  python tools/bin/crystallize.py --domain cold-email --dry-run
+  python tools/bin/crystallize.py --domain my-domain
+  python tools/bin/crystallize.py --domain my-domain --dry-run
   python tools/bin/crystallize.py --all
-  python tools/bin/crystallize.py --domain cold-email --local  # No API, template only
+  python tools/bin/crystallize.py --domain my-domain --local  # No API, template only
 
 Requires: ANTHROPIC_API_KEY environment variable for full crystallization.
 Without it, generates templates for manual editing.
@@ -462,7 +462,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Crystallize domain knowledge into multi-resolution layers"
     )
-    parser.add_argument("--domain", help="Domain to crystallize (e.g., cold-email)")
+    parser.add_argument("--domain", help="Domain to crystallize (e.g., my-domain)")
     parser.add_argument("--all", action="store_true", help="Crystallize all domains")
     parser.add_argument(
         "--brain-root",

@@ -1,0 +1,24 @@
+domain: b2b-discovery
+name: "B2B Discovery"
+description: >
+  Synthetic B2B sales fundamentals — ICP, qualification, discovery calls, and
+  deal review. Demonstrates tier conflict and high freshness sensitivity.
+
+freshness_sensitivity: high
+
+related_domains:
+  - specialty-coffee
+
+skills:
+  - use-crystallized-brain
+
+reading_order:
+  bootstrap:
+    - _crystal/seed.md
+    - _crystal/principles.md
+
+crystal:
+  seed: _crystal/seed.md
+  principles: _crystal/principles.md
+  graph: _crystal/graph.yaml
+  persona: _crystal/persona.md

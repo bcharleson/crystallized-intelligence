@@ -12,8 +12,8 @@ Gates:
   4. SAFETY      — No API keys, emails, PII patterns in content
 
 Usage:
-  python tools/bin/verify.py corpus/cold-email/knowledge/new-article.md
-  python tools/bin/verify.py --domain cold-email
+  python tools/bin/verify.py corpus/my-domain/knowledge/new-article.md
+  python tools/bin/verify.py --domain my-domain
   python tools/bin/verify.py --all
   python tools/bin/verify.py --changed-only    # Only files changed in git
   python tools/bin/verify.py --all --strict     # Exit 1 on any warning
@@ -28,7 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+BRAIN_ROOT = DEFAULT_BRAIN_ROOT
 CORPUS_DIR = BRAIN_ROOT / "corpus"
 
 # PII patterns to flag
@@ -104,7 +105,10 @@ class VerificationResult:
         return len(self.errors) == 0
 
     def __str__(self):
-        rel = self.filepath.relative_to(BRAIN_ROOT)
+        try:
+            rel = self.filepath.relative_to(BRAIN_ROOT)
+        except ValueError:
+            rel = self.filepath
         if self.passed and not self.warnings:
             return f"  ✓ {rel}"
         lines = []
@@ -217,15 +221,30 @@ def get_changed_files() -> list[Path]:
 
 
 def main():
+    global BRAIN_ROOT, CORPUS_DIR
+
     parser = argparse.ArgumentParser(description="Verify brain content quality")
     parser.add_argument("file", nargs="?", help="Specific file to verify")
     parser.add_argument("--domain", help="Verify all files in a domain")
     parser.add_argument("--all", action="store_true", help="Verify all corpus files")
+    parser.add_argument(
+        "--brain-root",
+        help="Brain root directory containing corpus/ (defaults to repository root)",
+    )
     parser.add_argument("--changed-only", action="store_true",
                         help="Only verify files changed in git")
     parser.add_argument("--strict", action="store_true",
                         help="Treat warnings as errors (exit 1)")
     args = parser.parse_args()
+
+    if args.brain_root:
+        BRAIN_ROOT = Path(args.brain_root).expanduser().resolve()
+        CORPUS_DIR = BRAIN_ROOT / "corpus"
+
+    if args.domain or args.all:
+        if not CORPUS_DIR.exists():
+            print(f"Error: corpus directory not found at {CORPUS_DIR}", file=sys.stderr)
+            sys.exit(1)
 
     # Collect files
     files = []
