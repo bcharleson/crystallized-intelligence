@@ -1,6 +1,6 @@
 # Demo Brain
 
-Public-safe sample brain for the Crystallized Intelligence framework.
+Public-safe sample brain for the Crystallized Intelligence for Agents framework.
 
 ## Domains
 

@@ -1,8 +1,8 @@
-# Crystallized Intelligence
+# Crystallized Intelligence for Agents
 
 **Give AI agents expert judgment in hundreds of tokens — not a haystack of documents.**
 
-Most teams still feed agents raw files, vector chunks, or whole wikis at query time. That works for lookup, but it burns context, loses hierarchy, and forces the model to re-derive expertise on every turn. Crystallized Intelligence flips the model: **compile domain knowledge into layers once**, then let agents load only what the task needs — from a ~200-token seed up to full sources.
+Most teams still feed agents raw files, vector chunks, or whole wikis at query time. That works for lookup, but it burns context, loses hierarchy, and forces the model to re-derive expertise on every turn. Crystallized Intelligence for Agents flips the model: **compile domain knowledge into layers once**, then let agents load only what the task needs — from a ~200-token seed up to full sources.
 
 This repo is the **open-source framework**: CLI tools, schemas, docs, and a demo brain you can run in under a minute with zero API keys. Your proprietary content lives in a separate brain repo; point `BRAIN_ROOT` at it and reuse the same pipeline.
 
@@ -10,7 +10,7 @@ This repo is the **open-source framework**: CLI tools, schemas, docs, and a demo
 
 ## Why this beats naive RAG
 
-| Naive RAG | Crystallized Intelligence |
+| Naive RAG | Crystallized Intelligence for Agents |
 |-----------|---------------------------|
 | Retrieves similar *chunks* each query | Loads pre-distilled *judgment* first |
 | No trust hierarchy — blog ≈ playbook | Source tiers in frontmatter; tier 0 wins |
@@ -36,7 +36,7 @@ No `pip install`, no API key, no `BRAIN_ROOT` export for `try`. **Python 3.9+** 
 ```
 $ python tools/bin/brain.py try
 
-Crystallized Intelligence — 60-second demo
+Crystallized Intelligence for Agents — 60-second demo
 ================================================
 
 Domain: specialty-coffee  (demo brain, no BRAIN_ROOT needed)
@@ -404,7 +404,7 @@ Add this block to your agent config (`AGENTS.md`, `CLAUDE.md`, Cursor rules, or 
 ```markdown
 ## Brain access protocol
 
-When this project includes a Crystallized Intelligence brain:
+When this project includes a Crystallized Intelligence for Agents brain:
 
 1. Load `brain.yaml`, then `corpus/{domain}/_domain.yaml`.
 2. Always read `_crystal/seed.md` and `_crystal/principles.md` before deeper files.

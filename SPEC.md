@@ -1,8 +1,8 @@
-# Crystallized Intelligence Framework Specification
+# Crystallized Intelligence for Agents — Framework Specification
 
 ## 1. Vision
 
-Crystallized Intelligence is a framework for building domain-mastery knowledge
+Crystallized Intelligence for Agents is a framework for building domain-mastery knowledge
 bases, called **Brains**, for AI agents and humans.
 
 The core idea is simple:

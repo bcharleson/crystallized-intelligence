@@ -2,7 +2,7 @@
 """
 crystallize.py — Multi-resolution knowledge distillation.
 
-The core of the Crystallized Intelligence framework. Reads all knowledge
+The core of the Crystallized Intelligence for Agents framework. Reads all knowledge
 in a domain and produces:
 
   Layer 4: seed.md        (~200 tokens)  Domain DNA — core principles + heuristics

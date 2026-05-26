@@ -129,7 +129,7 @@ Install the retrieval skill: copy [skills/use-crystallized-brain/SKILL.md](../sk
 Add to `AGENTS.md` or project rules:
 
 ```markdown
-## Brain (Crystallized Intelligence)
+## Brain (Crystallized Intelligence for Agents)
 
 When BRAIN_ROOT is configured or MCP server `crystallized-intelligence` is available:
 

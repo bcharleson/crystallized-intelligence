@@ -1,7 +1,7 @@
 ---
 name: use-crystallized-brain
 description: >-
-  Layer-first retrieval from a Crystallized Intelligence brain via CLI or MCP.
+  Layer-first retrieval from a Crystallized Intelligence for Agents brain via CLI or MCP.
   Use when BRAIN_ROOT is set, brain MCP tools are available, or the user asks
   to query/bootstrap/expand a domain brain without loading the full corpus.
 ---

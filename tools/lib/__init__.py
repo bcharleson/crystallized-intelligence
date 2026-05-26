@@ -1,1 +1,1 @@
-# Crystallized Intelligence shared library (stdlib only).
+# Crystallized Intelligence for Agents — shared library (stdlib only).

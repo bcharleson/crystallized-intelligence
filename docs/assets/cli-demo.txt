@@ -1,6 +1,6 @@
 $ python tools/bin/brain.py try
 
-Crystallized Intelligence — 60-second demo
+Crystallized Intelligence for Agents — 60-second demo
 ================================================
 
 Domain: specialty-coffee  (demo brain, no BRAIN_ROOT needed)

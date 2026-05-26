@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for improving Crystallized Intelligence. This repo is the **public framework** — keep domain-specific content in your own brain repo or in `examples/demo-brain/` (public-safe demos only).
+Thanks for improving Crystallized Intelligence for Agents. This repo is the **public framework** — keep domain-specific content in your own brain repo or in `examples/demo-brain/` (public-safe demos only).
 
 ## Development setup
 

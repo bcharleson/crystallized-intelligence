@@ -62,8 +62,8 @@ def replace_template_fields(text: str, brain_name: str, domains: list[str]) -> s
 
     text = text.replace('name: "Example Brain"', f'name: "{brain_name}"')
     text = text.replace(
-        "A Crystallized Intelligence brain that compiles domain expertise into\n    agent-readable knowledge layers.",
-        f"{brain_name} built on the Crystallized Intelligence framework.",
+        "A Crystallized Intelligence for Agents brain that compiles domain expertise into\n    agent-readable knowledge layers.",
+        f"{brain_name} built on the Crystallized Intelligence for Agents framework.",
     )
     start = text.index("  domains:\n")
     end = text.index("\n  quality:\n")
@@ -147,7 +147,7 @@ def main() -> None:
             [
                 f"# {args.name}",
                 "",
-                "Initialized with Crystallized Intelligence.",
+                "Initialized with Crystallized Intelligence for Agents.",
                 "",
                 "## Next Steps",
                 "",

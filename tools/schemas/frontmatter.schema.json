@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Crystallized Intelligence — Document Frontmatter",
+  "title": "Crystallized Intelligence for Agents — Document Frontmatter",
   "description": "Metadata schema for all documents in a Brain corpus. Lives in YAML frontmatter at the top of every markdown file.",
   "type": "object",
   "required": ["title", "content_type", "created"],

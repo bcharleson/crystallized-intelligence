@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Local MCP server for Crystallized Intelligence brains.
+Local MCP server for Crystallized Intelligence for Agents brains.
 
 Exposes layer-first retrieval tools so agents can bootstrap cheaply and expand
 on demand without loading the full corpus into context.
@@ -56,7 +56,7 @@ def _reader() -> BrainReader:
 mcp = FastMCP(
     "crystallized-intelligence",
     instructions=(
-        "Crystallized Intelligence brain access. Always call brain_bootstrap first "
+        "Crystallized Intelligence for Agents brain access. Always call brain_bootstrap first "
         "(~200-2K tokens). Call brain_expand or brain_get only when you need more detail. "
         "Lower source tier = higher trust (0 = first-party)."
     ),

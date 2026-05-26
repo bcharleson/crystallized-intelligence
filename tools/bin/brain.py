@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-brain — Unified CLI for Crystallized Intelligence brains.
+brain — Unified CLI for Crystallized Intelligence for Agents brains.
 
 Layer-first retrieval for agents: bootstrap (low tokens) then expand on demand.
 
@@ -48,7 +48,7 @@ DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 DEMO_BRAIN_ROOT = (DEFAULT_BRAIN_ROOT / "examples" / "demo-brain").resolve()
 
 WELCOME = """
-Crystallized Intelligence — layer-first knowledge for AI agents
+Crystallized Intelligence for Agents — layer-first knowledge for AI agents
 
   Pre-compiled expertise in ~200–2K tokens (bootstrap), expand only when needed.
 
@@ -289,7 +289,7 @@ def cmd_try(args: argparse.Namespace) -> None:
     seed = boot.get("layers", {}).get("seed", {})
     seed_text = seed.get("content", "")
 
-    print("Crystallized Intelligence — 60-second demo")
+    print("Crystallized Intelligence for Agents — 60-second demo")
     print("=" * 48)
     print()
     print(f"Domain: {domain}  (demo brain, no BRAIN_ROOT needed)")

@@ -1,4 +1,4 @@
-# Agent Guide — Crystallized Intelligence
+# Agent Guide — Crystallized Intelligence for Agents
 
 Open-source **framework** for pre-compiling domain expertise into agent-readable layers. This repo ships tooling and a demo brain; your proprietary content lives in a separate brain repo.
 
