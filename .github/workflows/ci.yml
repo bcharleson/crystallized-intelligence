@@ -39,5 +39,22 @@ jobs:
             --max-tier 3 \
             --brain-root examples/demo-brain
 
+      - name: Brain search (${{ matrix.domain }})
+        run: |
+          QUERY=grind
+          if [ "${{ matrix.domain }}" = "b2b-discovery" ]; then QUERY=qualify; fi
+          python tools/bin/brain.py search ${{ matrix.domain }} "$QUERY" --brain-root examples/demo-brain
+
+      - name: Brain get (${{ matrix.domain }})
+        run: |
+          if [ "${{ matrix.domain }}" = "specialty-coffee" ]; then
+            python tools/bin/brain.py get specialty-coffee knowledge/fundamentals/dialing-in-basics.md --brain-root examples/demo-brain
+          else
+            python tools/bin/brain.py get b2b-discovery knowledge/fundamentals/icp-basics.md --brain-root examples/demo-brain
+          fi
+
+      - name: Brain doctor
+        run: python tools/bin/brain.py doctor --brain-root examples/demo-brain
+
       - name: Freshness audit (${{ matrix.domain }})
         run: python tools/bin/brain.py freshness --domain ${{ matrix.domain }} --brain-root examples/demo-brain

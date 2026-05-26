@@ -98,12 +98,18 @@ python tools/bin/brain-mcp.py
 
 ### Cursor configuration
 
-Copy [mcp-config.example.json](mcp-config.example.json) into your Cursor MCP settings. Set absolute paths for:
+Run from the framework repo:
+
+```bash
+python tools/bin/brain.py setup-mcp
+```
+
+Or copy [mcp-config.example.json](mcp-config.example.json) into your Cursor MCP settings. Set absolute paths for:
 
 - `args[0]` → `brain-mcp.py` in your framework clone
 - `env.BRAIN_ROOT` → your brain directory
 
-Restart Cursor. Agents can call MCP tools instead of reading the whole repo.
+Full walkthrough: [MCP-SETUP.md](MCP-SETUP.md).
 
 Install the retrieval skill: copy [skills/use-crystallized-brain/SKILL.md](../skills/use-crystallized-brain/SKILL.md) into your agent's skill directory (e.g. `.cursor/skills/use-crystallized-brain/`). See also [AGENTS.md](../AGENTS.md).
 

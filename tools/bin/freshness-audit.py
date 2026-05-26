@@ -33,7 +33,7 @@ from typing import Optional
 _TOOLS = Path(__file__).resolve().parent.parent
 if str(_TOOLS) not in sys.path:
     sys.path.insert(0, str(_TOOLS))
-from lib.runtime import require_python  # noqa: E402
+from lib.runtime import require_python, resolve_brain_root  # noqa: E402
 
 require_python()
 
@@ -312,6 +312,9 @@ def main():
         BRAIN_ROOT = Path(args.brain_root).expanduser().resolve()
         CORPUS_DIR = BRAIN_ROOT / "corpus"
         _SENSITIVITY_CACHE.clear()
+    else:
+        BRAIN_ROOT = resolve_brain_root(None, DEFAULT_BRAIN_ROOT)
+        CORPUS_DIR = BRAIN_ROOT / "corpus"
 
     if not args.file:
         if not CORPUS_DIR.exists():

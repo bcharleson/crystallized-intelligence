@@ -4,6 +4,29 @@
 
 Instead of dumping raw text into an LLM at runtime, Crystallized Intelligence gives your agents something better: pre-compiled understanding — organized into layers from dense compressed heuristics down to full source material. The agent loads only what the task needs.
 
+## Status
+
+**Beta — framework and demo brain are public and usable.** Core CLI tools (`brain`, `classify`, `crystallize`, `verify`, `freshness-audit`) run on **Python 3.9+** with no pip dependencies. The bundled `examples/demo-brain` works end-to-end without an API key.
+
+| Area | State |
+|------|--------|
+| Layer-first retrieval (`brain bootstrap/expand/search/get`) | Stable |
+| Heuristic crystallization (`crystallize --local`) | Usable — distills from your corpus; AI mode needs `ANTHROPIC_API_KEY` |
+| MCP server | Manual setup — run `brain setup-mcp` for a ready-made config |
+| Your private brain repo | You bring content; this repo ships the framework only |
+
+**Roadmap:** richer MCP onboarding, more example domains, optional pip package for `brain` on PATH.
+
+### This repo vs your brain
+
+| | **This repo (framework)** | **Your brain repo** |
+|---|---------------------------|---------------------|
+| Contains | Tools, schemas, docs, demo content | Your `brain.yaml` + `corpus/` |
+| Visibility | Public | Usually private |
+| Clone once | Yes — fork or vendor the framework | One per team/product/domain |
+
+Set `BRAIN_ROOT` to point tools at your brain directory (or use `--brain-root`). The framework never ships your proprietary content.
+
 ---
 
 ## The Problem
@@ -68,7 +91,7 @@ A Skill says "run the pour-over checklist and format the output." A Brain contai
 
 ## Quick Start
 
-**Requirements:** **Python 3.9+** (stdlib-only core tools; tested on 3.9, 3.10, and 3.12 in CI). No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, the tool generates templates for manual editing.
+**Requirements:** **Python 3.9+** (stdlib-only core tools; tested on 3.9, 3.10, and 3.12 in CI). No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, `crystallize --local` heuristically distills crystal layers from your knowledge files.
 
 On macOS, the system `python3` may be older than 3.9 — use `python3.10` from Homebrew or [python.org](https://www.python.org/downloads/) if commands exit with a version error.
 
@@ -77,13 +100,23 @@ On macOS, the system `python3` may be older than 3.9 — use `python3.10` from H
 git clone https://github.com/bcharleson/crystallized-intelligence
 cd crystallized-intelligence
 
-# 2. Try the demo brain (no API key needed)
+# 2. Zero-config demo (no BRAIN_ROOT export needed)
+python tools/bin/brain.py demo specialty-coffee
+
+# 3. Full demo brain workflow
 export BRAIN_ROOT=examples/demo-brain
+python tools/bin/brain.py doctor
 python tools/bin/brain.py bootstrap specialty-coffee
 python tools/bin/brain.py expand specialty-coffee --query "grind" --max-tier 3
 ```
 
-You can also run `python tools/bin/crystallize.py --brain-root examples/demo-brain --domain specialty-coffee --local` to regenerate crystal templates. Open `examples/demo-brain/corpus/specialty-coffee/_crystal/` to inspect `seed.md`, `principles.md`, `graph.yaml`, and `persona.md`.
+To build crystal layers without an API key, add knowledge under `corpus/{domain}/knowledge/` then run:
+
+```bash
+python tools/bin/crystallize.py --brain-root examples/demo-brain --domain specialty-coffee --local
+```
+
+Local mode extracts headings, bullets, and summaries from your articles — it does **not** overwrite an existing good `_crystal/` unless you pass `--force`. Inspect `examples/demo-brain/corpus/specialty-coffee/_crystal/` for the shipped demo crystals.
 
 ---
 
@@ -98,7 +131,7 @@ python tools/bin/brain.py init --path ~/my-brain --name "My Brain" --domains "my
 # Add source material into ~/my-brain/corpus/my-domain/sources/
 # Each file should have YAML frontmatter — see the schema below
 
-# 5. Crystallize (local templates, no API)
+# 5. Crystallize (local heuristic distillation, no API)
 python tools/bin/crystallize.py --brain-root ~/my-brain --domain my-domain --local
 
 # 5a. Crystallize with AI assistance (requires ANTHROPIC_API_KEY)

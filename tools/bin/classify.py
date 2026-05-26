@@ -28,7 +28,7 @@ from pathlib import Path
 _TOOLS = Path(__file__).resolve().parent.parent
 if str(_TOOLS) not in sys.path:
     sys.path.insert(0, str(_TOOLS))
-from lib.runtime import require_python  # noqa: E402
+from lib.runtime import require_python, resolve_brain_root  # noqa: E402
 
 require_python()
 
@@ -231,6 +231,25 @@ def classify_file(filepath: Path) -> dict:
     return suggestions
 
 
+def _should_classify(rel: Path, include_crystal: bool) -> bool:
+    parts = rel.parts
+    if parts and parts[0] == "_crystal" and not include_crystal:
+        return False
+    return True
+
+
+def _collect_files(domain_dir: Path, include_crystal: bool) -> list[Path]:
+    return sorted(
+        f
+        for f in domain_dir.rglob("*")
+        if f.is_file()
+        and f.suffix in (".md", ".txt")
+        and not f.name.startswith("_")
+        and not f.name.startswith(".")
+        and _should_classify(f.relative_to(domain_dir), include_crystal)
+    )
+
+
 def _display_path(filepath: Path) -> Path:
     """Path for display — relative to brain root when possible."""
     try:
@@ -279,12 +298,16 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--summary", action="store_true", help="Show summary statistics")
+    parser.add_argument(
+        "--include-crystal",
+        action="store_true",
+        help="Include corpus/{domain}/_crystal/ files (excluded by default)",
+    )
     args = parser.parse_args()
 
-    if args.brain_root:
-        BRAIN_ROOT = Path(args.brain_root).expanduser().resolve()
-        CORPUS_DIR = BRAIN_ROOT / "corpus"
-        _FRESHNESS_CACHE.clear()
+    BRAIN_ROOT = resolve_brain_root(args.brain_root, DEFAULT_BRAIN_ROOT)
+    CORPUS_DIR = BRAIN_ROOT / "corpus"
+    _FRESHNESS_CACHE.clear()
 
     if not CORPUS_DIR.exists():
         print(f"Error: corpus directory not found at {CORPUS_DIR}", file=sys.stderr)
@@ -302,13 +325,12 @@ def main():
         if not domain_dir.exists():
             print(f"Error: Domain not found: {args.domain}", file=sys.stderr)
             sys.exit(1)
-        files = sorted(f for f in domain_dir.rglob("*")
-                       if f.is_file() and f.suffix in (".md", ".txt")
-                       and not f.name.startswith("_") and not f.name.startswith("."))
+        files = _collect_files(domain_dir, args.include_crystal)
     elif args.all:
-        files = sorted(f for f in CORPUS_DIR.rglob("*")
-                       if f.is_file() and f.suffix in (".md", ".txt")
-                       and not f.name.startswith("_") and not f.name.startswith("."))
+        files = []
+        for domain_dir in sorted(CORPUS_DIR.iterdir()):
+            if domain_dir.is_dir() and not domain_dir.name.startswith("."):
+                files.extend(_collect_files(domain_dir, args.include_crystal))
 
     print(f"Classifying {len(files)} files...")
 

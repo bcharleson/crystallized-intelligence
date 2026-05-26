@@ -19,10 +19,11 @@ Usage:
   python tools/bin/crystallize.py --domain my-domain
   python tools/bin/crystallize.py --domain my-domain --dry-run
   python tools/bin/crystallize.py --all
-  python tools/bin/crystallize.py --domain my-domain --local  # No API, template only
+  python tools/bin/crystallize.py --domain my-domain --local  # Heuristic distillation (no API)
+  python tools/bin/crystallize.py --domain my-domain --local --force  # Overwrite existing _crystal/
 
-Requires: ANTHROPIC_API_KEY environment variable for full crystallization.
-Without it, generates templates for manual editing.
+Requires: ANTHROPIC_API_KEY environment variable for full AI crystallization.
+Without it, --local distills heuristically from your knowledge files (no placeholders).
 
 Requires Python 3.9+ (see README.md).
 """
@@ -34,11 +35,12 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 _TOOLS = Path(__file__).resolve().parent.parent
 if str(_TOOLS) not in sys.path:
     sys.path.insert(0, str(_TOOLS))
-from lib.runtime import require_python  # noqa: E402
+from lib.runtime import require_python, resolve_brain_root  # noqa: E402
 
 require_python()
 
@@ -107,6 +109,10 @@ def read_domain_knowledge(domain: str) -> dict:
             continue
 
         rel = fpath.relative_to(domain_dir)
+        parts = rel.parts
+        if parts and parts[0] == "_crystal":
+            continue
+
         word_count = len(content.split())
         result["total_words"] += word_count
 
@@ -299,65 +305,214 @@ Write as a system prompt. Target: ~3000 tokens. Start with "You are..."."""
     return results
 
 
-def generate_local_templates(domain: str, data: dict) -> dict:
-    """Generate template files for manual crystallization (no API needed)."""
-    knowledge_titles = [e["title"] for e in data["knowledge_files"]]
-    source_titles = [e["title"] for e in data["source_files"]]
+def strip_frontmatter(content: str) -> str:
+    """Return markdown body without YAML frontmatter."""
+    match = re.match(r"^---\s*\n.*?\n---\s*\n", content, re.DOTALL)
+    return content[match.end() :] if match else content
 
-    seed = f"""[SEED — {domain} domain — ~200 tokens]
 
-Distill the essence of {domain} here. Core principles, key heuristics,
-and the critical insight that separates experts from novices.
+def extract_bullets(body: str, limit: int = 40) -> list[str]:
+    """Pull bullet and numbered list items from markdown body."""
+    bullets: list[str] = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        for pattern in (r"^[-*]\s+(.+)$", r"^\d+\.\s+(.+)$"):
+            match = re.match(pattern, stripped)
+            if match:
+                text = match.group(1).strip()
+                if len(text) > 12 and text not in bullets:
+                    bullets.append(text)
+                break
+        if len(bullets) >= limit:
+            break
+    return bullets
 
-Knowledge articles available ({len(knowledge_titles)}):
-{chr(10).join(f'  - {t}' for t in knowledge_titles[:20])}
 
-Sources available ({len(source_titles)}):
-{chr(10).join(f'  - {t}' for t in source_titles[:10])}
+def extract_h2_sections(body: str) -> list[tuple[str, str]]:
+    """Split body into (heading, content) pairs for level-2 sections."""
+    sections: list[tuple[str, str]] = []
+    current_title: Optional[str] = None
+    current_lines: list[str] = []
+    for line in body.splitlines():
+        match = re.match(r"^##\s+(.+)$", line)
+        if match:
+            if current_title:
+                sections.append((current_title, "\n".join(current_lines).strip()))
+            current_title = match.group(1).strip()
+            current_lines = []
+        elif current_title is not None:
+            current_lines.append(line)
+    if current_title:
+        sections.append((current_title, "\n".join(current_lines).strip()))
+    return sections
 
-Total corpus: {data['total_words']:,} words across {len(data['knowledge_files']) + len(data['source_files'])} files.
 
-Replace this template with the domain DNA."""
+def first_sentences(text: str, max_sentences: int = 2) -> str:
+    """Return the first few sentences from prose."""
+    cleaned = re.sub(r"\s+", " ", text.strip())
+    if not cleaned:
+        return ""
+    parts = re.split(r"(?<=[.!?])\s+", cleaned)
+    return " ".join(parts[:max_sentences]).strip()
 
-    principles = f"""# {domain.replace('-', ' ').title()} — Principles
 
-[PRINCIPLES — ~2000 tokens]
+def truncate_chars(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 3].rstrip() + "..."
 
-## Core Frameworks
-1. [Framework name]: [How it works in 2-3 sentences]
 
-## Key Rules
-1. [Rule]: [Why it matters]
+def slugify_concept(title: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return slug or "concept"
 
-## Common Mistakes
-1. [Mistake]: [How to avoid]
 
-## Decision Tree
-- If [situation], then [approach]
+def _prioritize_knowledge(entries: list[dict]) -> list[dict]:
+    """Prefer fundamentals / shorter guides for seed extraction."""
 
-## Cross-Domain Links
-- Related to: [domain] — [how]
+    def sort_key(entry: dict) -> tuple[int, int]:
+        path = entry["path"].lower()
+        priority = 0
+        if "fundamental" in path or "basics" in path or "intro" in path:
+            priority -= 2
+        if "knowledge/" in path:
+            priority -= 1
+        return (priority, entry["word_count"])
 
-Replace this template with compressed domain principles."""
+    return sorted(entries, key=sort_key)
 
-    graph = f"""nodes:
-  # [Replace with actual concepts from {domain} domain]
-  example-concept:
-    seed: "One-sentence distillation of this concept"
-    connections:
-      - target: related-concept
-        weight: 0.8
-        relationship: "grounded-in"
+
+def crystal_is_placeholder(filepath: Path) -> bool:
+    """True when an existing crystal file looks like an empty stub."""
+    if not filepath.is_file():
+        return True
+    text = filepath.read_text(encoding="utf-8", errors="ignore")
+    markers = (
+        "Replace this template",
+        "[SEED —",
+        "[PRINCIPLES —",
+        "[PERSONA —",
+        "example-concept:",
+        "[Replace with actual concepts",
+    )
+    return any(marker in text for marker in markers)
+
+
+def generate_local_distillation(domain: str, data: dict) -> dict:
+    """Distill crystal layers from corpus text without an LLM (stdlib heuristics)."""
+    domain_label = domain.replace("-", " ").title()
+    knowledge = _prioritize_knowledge(data["knowledge_files"])
+    all_bullets: list[str] = []
+    all_sections: list[tuple[str, str, str]] = []
+
+    for entry in knowledge:
+        body = strip_frontmatter(entry["content"])
+        all_bullets.extend(extract_bullets(body))
+        for title, section_body in extract_h2_sections(body):
+            all_sections.append((entry["title"], title, section_body))
+
+    seed_parts: list[str] = []
+    for entry in knowledge[:8]:
+        body = strip_frontmatter(entry["content"])
+        prose = re.sub(r"^#.+$", "", body, flags=re.MULTILINE)
+        prose = re.sub(r"^##.+$", "", prose, flags=re.MULTILINE)
+        sentence = first_sentences(prose, max_sentences=2)
+        if sentence:
+            seed_parts.append(f"- **{entry['title']}**: {sentence}")
+    if not seed_parts and all_bullets:
+        seed_parts = [f"- {b}" for b in all_bullets[:6]]
+    seed_body = truncate_chars(
+        "\n".join(seed_parts) or f"Expert heuristics for {domain_label}.",
+        SEED_TARGET_CHARS,
+    )
+    seed = f"""> Local crystallization — heuristic distillation from your corpus (no API).
+> Set `ANTHROPIC_API_KEY` and re-run without `--local` for AI-powered synthesis.
+
+{seed_body}
 """
 
-    persona = f"""You are a world-class expert in {domain.replace('-', ' ')}.
+    principles_lines = [
+        f"# {domain_label} — Principles",
+        "",
+        "> Heuristic distillation from knowledge articles. Review and edit as needed.",
+        "",
+        "## Core Frameworks",
+    ]
+    framework_count = 0
+    for _file_title, section_title, section_body in all_sections[:12]:
+        summary = first_sentences(section_body, max_sentences=2) or section_body[:200]
+        principles_lines.append(f"### {section_title}")
+        principles_lines.append(summary)
+        principles_lines.append("")
+        framework_count += 1
+    if framework_count == 0 and knowledge:
+        for entry in knowledge[:5]:
+            principles_lines.append(f"### {entry['title']}")
+            principles_lines.append(first_sentences(strip_frontmatter(entry["content"]), 3))
+            principles_lines.append("")
 
-[PERSONA — ~3000 tokens]
+    principles_lines.append("## Key Rules")
+    rules = all_bullets[:15] or [
+        f"Ground decisions in first-party knowledge under corpus/{domain}/knowledge/",
+    ]
+    for idx, rule in enumerate(rules, start=1):
+        principles_lines.append(f"{idx}. {rule}")
 
-Replace this template with a self-contained expert persona that gives
-an agent domain mastery for {domain}.
+    mistake_lines = [
+        line for line in all_bullets if re.search(r"mistake|avoid|never|don't|do not", line, re.I)
+    ]
+    principles_lines.extend(["", "## Common Mistakes"])
+    if mistake_lines:
+        for idx, line in enumerate(mistake_lines[:8], start=1):
+            principles_lines.append(f"{idx}. {line}")
+    else:
+        principles_lines.append("1. Skipping fundamentals before advanced technique.")
 
-Based on {data['total_words']:,} words of curated knowledge."""
+    principles_lines.extend(["", "## Decision Tree", "- If context is unclear, start from fundamentals and one variable at a time."])
+    principles = truncate_chars("\n".join(principles_lines), PRINCIPLES_TARGET_CHARS)
+
+    graph_lines = ["nodes:"]
+    seen_slugs: set[str] = set()
+    for _file_title, section_title, section_body in all_sections[:20]:
+        slug = slugify_concept(section_title)
+        if slug in seen_slugs:
+            slug = f"{slug}-{len(seen_slugs)}"
+        seen_slugs.add(slug)
+        seed_line = first_sentences(section_body, 1) or section_title
+        graph_lines.append(f"  {slug}:")
+        graph_lines.append(f'    seed: "{seed_line.replace(chr(34), chr(39))}"')
+        graph_lines.append("    connections: []")
+    if len(graph_lines) == 1:
+        graph_lines.extend(
+            [
+                f"  {slugify_concept(domain)}:",
+                f'    seed: "Core concepts for {domain_label}"',
+                "    connections: []",
+            ]
+        )
+    graph = "\n".join(graph_lines) + "\n"
+
+    persona_rules = "\n".join(f"- {b}" for b in rules[:10])
+    persona = truncate_chars(
+        f"""You are a world-class expert in {domain_label}.
+
+> Local persona distilled from {len(knowledge)} knowledge file(s) and {data['total_words']:,} words of corpus text.
+
+## How you think
+- Start from first principles, then apply domain-specific heuristics.
+- Prefer concise, actionable guidance over generic advice.
+- When uncertain, say what you would verify in the knowledge layer.
+
+## Rules you always follow
+{persona_rules or "- Apply the domain fundamentals before improvising."}
+
+## Voice
+Direct, practical, and specific to {domain_label}. Cite trade-offs when recommendations depend on context.
+""",
+        PERSONA_TARGET_CHARS,
+    )
 
     return {
         "seed": seed,
@@ -367,7 +522,12 @@ Based on {data['total_words']:,} words of curated knowledge."""
     }
 
 
-def write_crystal_outputs(domain: str, results: dict, dry_run: bool = False):
+def write_crystal_outputs(
+    domain: str,
+    results: dict,
+    dry_run: bool = False,
+    pipeline: str = "crystallize",
+):
     """Write crystallization outputs to _crystal/ directory."""
     crystal_dir = CORPUS_DIR / domain / "_crystal"
 
@@ -392,7 +552,7 @@ source:
   author_authority: owner
 processing:
   status: processed
-  pipeline: crystallize
+  pipeline: {pipeline}
 ---
 
 """,
@@ -416,7 +576,7 @@ source:
   author_authority: owner
 processing:
   status: processed
-  pipeline: crystallize
+  pipeline: {pipeline}
 ---
 
 """,
@@ -443,7 +603,7 @@ source:
   author_authority: owner
 processing:
   status: processed
-  pipeline: crystallize
+  pipeline: {pipeline}
 ---
 
 """,
@@ -478,7 +638,9 @@ def main():
         help="Brain root directory containing corpus/ (defaults to repository root)",
     )
     parser.add_argument("--local", action="store_true",
-                        help="Generate templates only (no API calls)")
+                        help="Heuristic distillation only (no API calls)")
+    parser.add_argument("--force", action="store_true",
+                        help="Overwrite existing _crystal/ files")
     parser.add_argument("--dry-run", action="store_true",
                         help="Preview without writing files")
     args = parser.parse_args()
@@ -486,9 +648,8 @@ def main():
     if not args.domain and not args.all:
         parser.error("Specify --domain or --all")
 
-    if args.brain_root:
-        BRAIN_ROOT = Path(args.brain_root).expanduser().resolve()
-        CORPUS_DIR = BRAIN_ROOT / "corpus"
+    BRAIN_ROOT = resolve_brain_root(args.brain_root, DEFAULT_BRAIN_ROOT)
+    CORPUS_DIR = BRAIN_ROOT / "corpus"
 
     if not CORPUS_DIR.exists():
         print(f"Error: corpus directory not found at {CORPUS_DIR}", file=sys.stderr)
@@ -499,10 +660,11 @@ def main():
 
     if not use_api:
         if args.local:
-            print("Mode: local templates (no API)")
+            print("Mode: local heuristic distillation (no API)")
         else:
-            print("Mode: local templates (ANTHROPIC_API_KEY not set)")
+            print("Mode: local heuristic distillation (ANTHROPIC_API_KEY not set)")
             print("  Set ANTHROPIC_API_KEY to enable AI-powered crystallization")
+            print("  Or pass --local explicitly to distill from your knowledge files")
     else:
         print("Mode: API-powered crystallization (Claude Sonnet)")
 
@@ -528,18 +690,32 @@ def main():
             print(f"  Skipping: no content to crystallize")
             continue
 
+        crystal_dir = CORPUS_DIR / domain / "_crystal"
+        seed_path = crystal_dir / "seed.md"
+        if (
+            not args.force
+            and not args.dry_run
+            and seed_path.exists()
+            and not crystal_is_placeholder(seed_path)
+        ):
+            print("  Skipping: _crystal/ already has distilled content (use --force to overwrite)")
+            continue
+
         if use_api:
             results = crystallize_with_api(domain, data, api_key)
+            pipeline = "crystallize"
         else:
-            results = generate_local_templates(domain, data)
+            results = generate_local_distillation(domain, data)
+            pipeline = "crystallize-local"
 
-        write_crystal_outputs(domain, results, dry_run=args.dry_run)
+        write_crystal_outputs(domain, results, dry_run=args.dry_run, pipeline=pipeline)
 
     print(f"\nDone! Crystallized {len(domains)} domain(s).")
     if not use_api:
         print("\nNext steps:")
-        print("  1. Set ANTHROPIC_API_KEY and re-run, OR")
-        print("  2. Manually edit the template files in corpus/{domain}/_crystal/")
+        print("  1. Review corpus/{domain}/_crystal/ and edit anything that needs refinement")
+        print("  2. Set ANTHROPIC_API_KEY and re-run without --local for AI synthesis, OR")
+        print("  3. Run: python tools/bin/brain.py verify --domain <domain>")
 
 
 if __name__ == "__main__":

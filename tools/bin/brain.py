@@ -19,6 +19,9 @@ Pipeline commands delegate to existing tools:
   brain crystallize --domain my-domain --local
   brain verify --domain my-domain
   brain freshness --domain my-domain
+  brain doctor
+  brain demo
+  brain setup-mcp
 """
 
 from __future__ import annotations
@@ -35,7 +38,7 @@ TOOLS_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
 from lib.brain_reader import BrainReader  # noqa: E402
-from lib.runtime import require_python  # noqa: E402
+from lib.runtime import require_python, resolve_brain_root as _resolve_brain_root  # noqa: E402
 
 require_python()
 
@@ -44,12 +47,7 @@ DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def resolve_brain_root(explicit: Optional[str]) -> Path:
-    if explicit:
-        return Path(explicit).expanduser().resolve()
-    env = os.environ.get("BRAIN_ROOT", "").strip()
-    if env:
-        return Path(env).expanduser().resolve()
-    return DEFAULT_BRAIN_ROOT
+    return _resolve_brain_root(explicit, DEFAULT_BRAIN_ROOT)
 
 
 def ensure_brain_root(path: Path) -> Path:
@@ -65,7 +63,8 @@ def ensure_brain_root(path: Path) -> Path:
             [
                 "  The framework repo root is not a brain.",
                 "  Try: export BRAIN_ROOT=examples/demo-brain",
-                "  Or:  python tools/bin/brain.py bootstrap specialty-coffee --brain-root examples/demo-brain",
+                "  Or:  python tools/bin/brain.py demo",
+                "  Run: python tools/bin/brain.py doctor",
             ]
         )
     else:
@@ -139,6 +138,112 @@ def cmd_search(reader: BrainReader, args: argparse.Namespace) -> None:
 
 def cmd_get(reader: BrainReader, args: argparse.Namespace) -> None:
     emit(reader.get_document(args.domain, args.path), args.format)
+
+
+def cmd_doctor(args: argparse.Namespace) -> None:
+    """Check environment and brain layout for first-time setup."""
+    brain_root = resolve_brain_root(args.brain_root)
+    checks: list[dict] = []
+
+    py_ok = sys.version_info >= (3, 9)
+    checks.append(
+        {
+            "name": "python",
+            "ok": py_ok,
+            "detail": f"{sys.version_info.major}.{sys.version_info.minor}",
+        }
+    )
+
+    brain_yaml = brain_root / "brain.yaml"
+    corpus = brain_root / "corpus"
+    brain_ok = brain_yaml.is_file() and corpus.is_dir()
+    checks.append(
+        {
+            "name": "brain_root",
+            "ok": brain_ok,
+            "path": str(brain_root),
+            "detail": "brain.yaml + corpus/" if brain_ok else "missing brain.yaml or corpus/",
+        }
+    )
+
+    domains: list[str] = []
+    crystals: dict[str, list[str]] = {}
+    if brain_ok:
+        for domain_dir in sorted(corpus.iterdir()):
+            if not domain_dir.is_dir() or domain_dir.name.startswith("."):
+                continue
+            domains.append(domain_dir.name)
+            crystal_dir = domain_dir / "_crystal"
+            if crystal_dir.is_dir():
+                crystals[domain_dir.name] = sorted(p.name for p in crystal_dir.iterdir() if p.is_file())
+
+    checks.append({"name": "domains", "ok": bool(domains), "count": len(domains), "ids": domains})
+
+    demo_root = (DEFAULT_BRAIN_ROOT / "examples" / "demo-brain").resolve()
+    if not brain_ok and demo_root.is_dir():
+        checks.append(
+            {
+                "name": "demo_brain",
+                "ok": True,
+                "path": str(demo_root),
+                "detail": "Run: export BRAIN_ROOT=examples/demo-brain && brain demo",
+            }
+        )
+
+    report = {
+        "ok": all(c.get("ok", True) for c in checks if c["name"] != "demo_brain"),
+        "checks": checks,
+        "crystals": crystals,
+        "hints": [],
+    }
+    if not brain_ok:
+        report["hints"].append("export BRAIN_ROOT=examples/demo-brain  # try the demo brain")
+        report["hints"].append("brain init --path ~/my-brain --name 'My Brain' --domains 'my-domain'")
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        report["hints"].append("ANTHROPIC_API_KEY unset — use crystallize --local for heuristic distillation")
+    emit(report, args.format)
+
+
+def cmd_demo(args: argparse.Namespace) -> None:
+    """Run bootstrap against the bundled demo brain (no setup required)."""
+    demo_root = (DEFAULT_BRAIN_ROOT / "examples" / "demo-brain").resolve()
+    if not (demo_root / "brain.yaml").is_file():
+        print(f"Error: demo brain not found at {demo_root}", file=sys.stderr)
+        raise SystemExit(1)
+    reader = BrainReader(demo_root)
+    domain = args.domain or "specialty-coffee"
+    payload = reader.bootstrap(domain, include_persona=False, max_tokens=args.max_tokens)
+    payload["brain_root"] = str(demo_root)
+    payload["hint"] = "export BRAIN_ROOT=examples/demo-brain to use the demo brain for all commands"
+    emit(payload, args.format)
+
+
+def cmd_setup_mcp(args: argparse.Namespace) -> None:
+    """Print MCP config JSON with absolute paths for Cursor / Claude Desktop."""
+    explicit = getattr(args, "brain_root", None)
+    if explicit:
+        brain_root = Path(explicit).expanduser().resolve()
+    elif os.environ.get("BRAIN_ROOT", "").strip():
+        brain_root = Path(os.environ["BRAIN_ROOT"]).expanduser().resolve()
+    else:
+        brain_root = (DEFAULT_BRAIN_ROOT / "examples" / "demo-brain").resolve()
+    mcp_script = (BIN_DIR / "brain-mcp.py").resolve()
+    config = {
+        "mcpServers": {
+            "crystallized-intelligence": {
+                "command": sys.executable,
+                "args": [str(mcp_script)],
+                "env": {"BRAIN_ROOT": str(brain_root)},
+            }
+        }
+    }
+    output = getattr(args, "output", "text")
+    if output == "json":
+        print(json.dumps(config, indent=2))
+    else:
+        print("# Add to Cursor MCP settings (merge into mcpServers):")
+        print(json.dumps(config, indent=2))
+        print("\nThen restart Cursor. See docs/MCP-SETUP.md for details.")
 
 
 def _delegate_tool(tool: str, brain_root: Path, extra: list[str]) -> None:
@@ -219,6 +324,7 @@ def main() -> None:
     p_cryst = sub.add_parser("crystallize", help="Run crystallize.py on a domain", parents=[parent])
     p_cryst.add_argument("--domain", required=True)
     p_cryst.add_argument("--local", action="store_true")
+    p_cryst.add_argument("--force", action="store_true", help="Overwrite existing _crystal/ files")
 
     p_verify = sub.add_parser("verify", help="Run verify.py on a domain", parents=[parent])
     p_verify.add_argument("--domain", required=True)
@@ -229,11 +335,60 @@ def main() -> None:
     p_fresh.add_argument("--domain", required=True)
     p_fresh.add_argument("--stale-only", action="store_true")
 
+    p_doctor = sub.add_parser(
+        "doctor",
+        help="Check Python version, BRAIN_ROOT, domains, and crystal files",
+        parents=[parent],
+    )
+    p_doctor.set_defaults(func=cmd_doctor)
+
+    p_demo = sub.add_parser(
+        "demo",
+        help="Bootstrap from examples/demo-brain without configuring BRAIN_ROOT",
+        parents=[parent],
+    )
+    p_demo.add_argument(
+        "domain",
+        nargs="?",
+        default="specialty-coffee",
+        help="Demo domain (default: specialty-coffee)",
+    )
+    p_demo.add_argument("--max-tokens", type=int, default=4000)
+    p_demo.set_defaults(func=cmd_demo)
+
+    p_mcp = sub.add_parser(
+        "setup-mcp",
+        help="Print MCP server config JSON with absolute paths",
+    )
+    p_mcp.add_argument(
+        "--brain-root",
+        help="Brain directory for BRAIN_ROOT in MCP env (defaults to $BRAIN_ROOT or demo brain)",
+    )
+    p_mcp.add_argument(
+        "--output",
+        choices=("json", "text"),
+        default="text",
+        help="Output format",
+    )
+    p_mcp.set_defaults(func=cmd_setup_mcp)
+
     args = parser.parse_args()
     brain_root = resolve_brain_root(args.brain_root)
 
     if args.command == "init":
         cmd_init(args)
+        return
+
+    if args.command == "doctor":
+        cmd_doctor(args)
+        return
+
+    if args.command == "demo":
+        cmd_demo(args)
+        return
+
+    if args.command == "setup-mcp":
+        cmd_setup_mcp(args)
         return
 
     if args.command == "classify":
@@ -244,7 +399,11 @@ def main() -> None:
 
     if args.command == "crystallize":
         ensure_brain_root(brain_root)
-        extra = ["--domain", args.domain] + (["--local"] if args.local else [])
+        extra = ["--domain", args.domain]
+        if args.local:
+            extra.append("--local")
+        if args.force:
+            extra.append("--force")
         _delegate_tool("crystallize", brain_root, extra)
         return
 
