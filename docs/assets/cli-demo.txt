@@ -1,0 +1,22 @@
+$ python tools/bin/brain.py try
+
+Crystallized Intelligence — 60-second demo
+================================================
+
+Domain: specialty-coffee  (demo brain, no BRAIN_ROOT needed)
+
+1) bootstrap  →  365 tokens (crystal layers only)
+   seed: "Great coffee comes from controlling extraction, not chasing gear. Start with fresh beans, a repeatable ratio, and a consistent grind. If the cup tastes sharp or thin, grind finer or increase contact time; if it tastes..."
+
+2) expand --query "grind"  →  195 tokens (ranked knowledge)
+   · Simple Brew Checklist  (tier 0, ~52 tok)
+   · Dialing In Basics  (tier 3, ~143 tok)
+
+Total context used: ~560 tokens
+Naive RAG often loads dozens of files (50K–100K+ tokens) per question.
+
+Next steps:
+  export BRAIN_ROOT=examples/demo-brain
+  python tools/bin/brain.py doctor
+  python tools/bin/brain.py bootstrap b2b-discovery
+  Docs: README.md

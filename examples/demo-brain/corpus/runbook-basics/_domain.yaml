@@ -1,0 +1,21 @@
+domain: runbook-basics
+name: "Runbook Basics"
+description: >
+  How to write operational runbooks agents and humans can follow under pressure.
+
+freshness_sensitivity: medium
+
+related_domains: []
+
+skills: []
+
+reading_order:
+  bootstrap:
+    - _crystal/seed.md
+    - _crystal/principles.md
+
+crystal:
+  seed: _crystal/seed.md
+  principles: _crystal/principles.md
+  graph: _crystal/graph.yaml
+  persona: _crystal/persona.md

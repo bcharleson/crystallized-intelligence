@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.12"]
-        domain: [specialty-coffee, b2b-discovery]
+        domain: [specialty-coffee, b2b-discovery, runbook-basics]
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +33,7 @@ jobs:
         run: |
           QUERY=grind
           if [ "${{ matrix.domain }}" = "b2b-discovery" ]; then QUERY=qualify; fi
+          if [ "${{ matrix.domain }}" = "runbook-basics" ]; then QUERY=triage; fi
           python tools/bin/brain.py expand ${{ matrix.domain }} \
             --query "$QUERY" \
             --max-tokens 4000 \
@@ -43,14 +44,17 @@ jobs:
         run: |
           QUERY=grind
           if [ "${{ matrix.domain }}" = "b2b-discovery" ]; then QUERY=qualify; fi
+          if [ "${{ matrix.domain }}" = "runbook-basics" ]; then QUERY=triage; fi
           python tools/bin/brain.py search ${{ matrix.domain }} "$QUERY" --brain-root examples/demo-brain
 
       - name: Brain get (${{ matrix.domain }})
         run: |
           if [ "${{ matrix.domain }}" = "specialty-coffee" ]; then
             python tools/bin/brain.py get specialty-coffee knowledge/fundamentals/dialing-in-basics.md --brain-root examples/demo-brain
-          else
+          elif [ "${{ matrix.domain }}" = "b2b-discovery" ]; then
             python tools/bin/brain.py get b2b-discovery knowledge/fundamentals/icp-basics.md --brain-root examples/demo-brain
+          else
+            python tools/bin/brain.py get runbook-basics examples/incident-triage-checklist.md --brain-root examples/demo-brain
           fi
 
       - name: Brain doctor
@@ -58,3 +62,18 @@ jobs:
 
       - name: Freshness audit (${{ matrix.domain }})
         run: python tools/bin/brain.py freshness --domain ${{ matrix.domain }} --brain-root examples/demo-brain
+
+  onboarding-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Brain try (zero-config demo)
+        run: python tools/bin/brain.py try
+
+      - name: Brain welcome (no subcommand)
+        run: python tools/bin/brain.py | head -5

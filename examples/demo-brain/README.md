@@ -8,6 +8,7 @@ Public-safe sample brain for the Crystallized Intelligence framework.
 |--------|---------|-----------|
 | `specialty-coffee` | Minimal hello-world — layers, tiers, bootstrap | `low` |
 | `b2b-discovery` | Comprehensive agent demo — qualification, tier conflict | `high` |
+| `runbook-basics` | Ops / SRE — runbook structure, triage checklists | `medium` |
 
 ## What each domain teaches
 
@@ -19,6 +20,12 @@ Public-safe sample brain for the Crystallized Intelligence framework.
 - `_crystal/` with real distilled seed/principles/persona
 - `examples/` checklists for operational workflows
 - Fictional **Acme Analytics** ICP — no real companies or proprietary methods
+
+**runbook-basics** (8 files) — operational writing for agents and on-call:
+
+- Trigger → triage → mitigate → escalate structure
+- Checklist-style `examples/` for incident triage
+- Tier **3** blog source vs tier **0** fundamentals (trust weighting demo)
 
 ## Quick start
 

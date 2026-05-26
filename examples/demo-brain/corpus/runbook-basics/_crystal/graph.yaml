@@ -1,0 +1,19 @@
+nodes:
+  trigger:
+    seed: "Symptoms and alerts that should open this runbook"
+    connections:
+      - target: triage
+        weight: 1.0
+        relationship: "leads-to"
+  triage:
+    seed: "Confirm impact, scope, and whether mitigation is safe"
+    connections:
+      - target: mitigate
+        weight: 0.9
+        relationship: "enables"
+  mitigate:
+    seed: "Executable steps with verification and rollback"
+    connections:
+      - target: escalate
+        weight: 0.7
+        relationship: "may-require"

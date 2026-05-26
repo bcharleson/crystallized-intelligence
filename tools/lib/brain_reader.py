@@ -7,9 +7,20 @@ Returns document bodies without YAML frontmatter to minimize token burn.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+
+class BrainError(Exception):
+    """Base error for brain access."""
+
+
+class DomainNotFoundError(BrainError):
+    def __init__(self, domain: str, available: list[str]) -> None:
+        self.domain = domain
+        self.available = available
+        super().__init__(domain)
 
 SOURCE_TIER: dict[str, int] = {
     "first_party": 0,
@@ -139,11 +150,19 @@ class BrainReader:
         if not self.corpus_dir.is_dir():
             raise FileNotFoundError(f"corpus/ not found under {self.brain_root}")
 
+    def list_domain_ids(self) -> list[str]:
+        self._require_corpus()
+        return sorted(
+            path.name
+            for path in self.corpus_dir.iterdir()
+            if path.is_dir() and not path.name.startswith(".")
+        )
+
     def _domain_dir(self, domain: str) -> Path:
         self._require_corpus()
         domain_dir = self.corpus_dir / domain
         if not domain_dir.is_dir():
-            raise FileNotFoundError(f"Domain not found: {domain}")
+            raise DomainNotFoundError(domain, self.list_domain_ids())
         return domain_dir
 
     def list_domains(self) -> list[dict]:
@@ -362,5 +381,7 @@ class BrainReader:
         rel = Path(rel_path.lstrip("/"))
         doc = self._load_file(domain_dir, rel)
         if not doc:
-            raise FileNotFoundError(f"Document not found: {rel_path}")
+            available = self.list_domain_ids()
+            hint = f" Available domains: {', '.join(available)}" if available else ""
+            raise FileNotFoundError(f"Document not found in '{domain}': {rel_path}.{hint}")
         return doc.to_dict()

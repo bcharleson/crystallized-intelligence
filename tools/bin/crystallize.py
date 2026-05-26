@@ -427,16 +427,13 @@ def generate_local_distillation(domain: str, data: dict) -> dict:
         "\n".join(seed_parts) or f"Expert heuristics for {domain_label}.",
         SEED_TARGET_CHARS,
     )
-    seed = f"""> Local crystallization — heuristic distillation from your corpus (no API).
-> Set `ANTHROPIC_API_KEY` and re-run without `--local` for AI-powered synthesis.
-
-{seed_body}
-"""
+    seed = seed_body + (
+        "\n\n<!-- crystallize-local: heuristic distillation from corpus; "
+        "re-run without --local after setting ANTHROPIC_API_KEY for AI synthesis -->\n"
+    )
 
     principles_lines = [
         f"# {domain_label} — Principles",
-        "",
-        "> Heuristic distillation from knowledge articles. Review and edit as needed.",
         "",
         "## Core Frameworks",
     ]
@@ -497,8 +494,6 @@ def generate_local_distillation(domain: str, data: dict) -> dict:
     persona_rules = "\n".join(f"- {b}" for b in rules[:10])
     persona = truncate_chars(
         f"""You are a world-class expert in {domain_label}.
-
-> Local persona distilled from {len(knowledge)} knowledge file(s) and {data['total_words']:,} words of corpus text.
 
 ## How you think
 - Start from first principles, then apply domain-specific heuristics.

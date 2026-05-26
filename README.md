@@ -1,8 +1,68 @@
 # Crystallized Intelligence
 
-**A git-native framework for pre-compiling domain expertise into agent-readable knowledge layers.**
+**Give AI agents expert judgment in hundreds of tokens — not a haystack of documents.**
 
-Instead of dumping raw text into an LLM at runtime, Crystallized Intelligence gives your agents something better: pre-compiled understanding — organized into layers from dense compressed heuristics down to full source material. The agent loads only what the task needs.
+Most teams still feed agents raw files, vector chunks, or whole wikis at query time. That works for lookup, but it burns context, loses hierarchy, and forces the model to re-derive expertise on every turn. Crystallized Intelligence flips the model: **compile domain knowledge into layers once**, then let agents load only what the task needs — from a ~200-token seed up to full sources.
+
+This repo is the **open-source framework**: CLI tools, schemas, docs, and a demo brain you can run in under a minute with zero API keys. Your proprietary content lives in a separate brain repo; point `BRAIN_ROOT` at it and reuse the same pipeline.
+
+---
+
+## Why this beats naive RAG
+
+| Naive RAG | Crystallized Intelligence |
+|-----------|---------------------------|
+| Retrieves similar *chunks* each query | Loads pre-distilled *judgment* first |
+| No trust hierarchy — blog ≈ playbook | Source tiers in frontmatter; tier 0 wins |
+| Context size unpredictable | `bootstrap` ~200–2K tok; `expand` with `--max-tokens` |
+| Hard to audit what the agent saw | Git-native markdown + JSON token counts |
+
+RAG answers “what text looks related?” A Brain answers “what would an expert think first, and where is the evidence if we need it?”
+
+---
+
+## Quick Start (3 commands)
+
+```bash
+git clone https://github.com/bcharleson/crystallized-intelligence && cd crystallized-intelligence
+python tools/bin/brain.py try
+python tools/bin/brain.py doctor --brain-root examples/demo-brain
+```
+
+No `pip install`, no API key, no `BRAIN_ROOT` export for `try`. **Python 3.9+** required (stdlib-only core tools).
+
+### What you just saw
+
+```
+$ python tools/bin/brain.py try
+
+Crystallized Intelligence — 60-second demo
+================================================
+
+Domain: specialty-coffee  (demo brain, no BRAIN_ROOT needed)
+
+1) bootstrap  →  365 tokens (crystal layers only)
+   seed: "Great coffee comes from controlling extraction, not chasing gear..."
+
+2) expand --query "grind"  →  195 tokens (ranked knowledge)
+   · Simple Brew Checklist  (tier 0, ~52 tok)
+   · Dialing In Basics  (tier 3, ~143 tok)
+
+Total context used: ~560 tokens
+```
+
+Full capture: [docs/assets/cli-demo.txt](docs/assets/cli-demo.txt). Run `python tools/bin/brain.py` with no arguments for the welcome menu.
+
+### Explore the demo brain
+
+```bash
+export BRAIN_ROOT=examples/demo-brain
+python tools/bin/brain.py bootstrap b2b-discovery          # sales / qualification demo
+python tools/bin/brain.py expand b2b-discovery --query "qualify" --max-tier 3
+python tools/bin/brain.py bootstrap runbook-basics           # ops / runbook demo
+```
+
+---
 
 ## Status
 
@@ -11,11 +71,12 @@ Instead of dumping raw text into an LLM at runtime, Crystallized Intelligence gi
 | Area | State |
 |------|--------|
 | Layer-first retrieval (`brain bootstrap/expand/search/get`) | Stable |
+| Onboarding (`brain try`, `brain doctor`, welcome when no args) | Stable |
 | Heuristic crystallization (`crystallize --local`) | Usable — distills from your corpus; AI mode needs `ANTHROPIC_API_KEY` |
 | MCP server | Manual setup — run `brain setup-mcp` for a ready-made config |
 | Your private brain repo | You bring content; this repo ships the framework only |
 
-**Roadmap:** richer MCP onboarding, more example domains, optional pip package for `brain` on PATH.
+**Roadmap:** richer MCP onboarding, optional pip package for `brain` on PATH.
 
 ### This repo vs your brain
 
@@ -89,21 +150,11 @@ A Skill says "run the pour-over checklist and format the output." A Brain contai
 
 ---
 
-## Quick Start
+## Build on the demo brain
 
-**Requirements:** **Python 3.9+** (stdlib-only core tools; tested on 3.9, 3.10, and 3.12 in CI). No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, `crystallize --local` heuristically distills crystal layers from your knowledge files.
-
-On macOS, the system `python3` may be older than 3.9 — use `python3.10` from Homebrew or [python.org](https://www.python.org/downloads/) if commands exit with a version error.
+After `brain try`, point at the bundled demo and explore three domains:
 
 ```bash
-# 1. Clone
-git clone https://github.com/bcharleson/crystallized-intelligence
-cd crystallized-intelligence
-
-# 2. Zero-config demo (no BRAIN_ROOT export needed)
-python tools/bin/brain.py demo specialty-coffee
-
-# 3. Full demo brain workflow
 export BRAIN_ROOT=examples/demo-brain
 python tools/bin/brain.py doctor
 python tools/bin/brain.py bootstrap specialty-coffee
@@ -116,7 +167,7 @@ To build crystal layers without an API key, add knowledge under `corpus/{domain}
 python tools/bin/crystallize.py --brain-root examples/demo-brain --domain specialty-coffee --local
 ```
 
-Local mode extracts headings, bullets, and summaries from your articles — it does **not** overwrite an existing good `_crystal/` unless you pass `--force`. Inspect `examples/demo-brain/corpus/specialty-coffee/_crystal/` for the shipped demo crystals.
+Local mode extracts headings, bullets, and summaries from your articles — it does **not** overwrite an existing good `_crystal/` unless you pass `--force`. Inspect `examples/demo-brain/corpus/*/_crystal/` for shipped demo crystals.
 
 ---
 
@@ -487,7 +538,7 @@ All corpus tools accept `--brain-root` pointing at a brain directory (the folder
 
 | Tool | What it does |
 |---|---|
-| **`brain.py`** | **Primary entrypoint** — retrieval (`bootstrap`, `expand`, `search`, `get`, `domains`) plus `init`, `classify`, `crystallize`, `verify`, `freshness` |
+| **`brain.py`** | **Primary entrypoint** — retrieval (`bootstrap`, `expand`, `search`, `get`, `domains`) plus `try`, `doctor`, `demo`, `init`, `classify`, `crystallize`, `verify`, `freshness`, `setup-mcp` |
 | `crystallize.py` | Distill domain knowledge into seed, principles, persona, graph (also via `brain crystallize`) |
 | `classify.py` | Preview suggested tiers and metadata from `source.type` and path heuristics |
 | `freshness-audit.py` | Flag documents approaching or past their stale threshold (also via `brain freshness`) |
@@ -528,6 +579,12 @@ This framework came out of building production AI agent systems that need durabl
 ## Full Specification
 
 See [SPEC.md](SPEC.md) for the complete framework specification, including the full multi-resolution model, crystallization pipeline details, agent access protocol, and design principles.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, validation commands, and PR guidelines.
 
 ---
 

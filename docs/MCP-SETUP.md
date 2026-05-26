@@ -7,7 +7,10 @@ Connect Cursor (or Claude Desktop) to your brain via the bundled MCP server.
 From the framework repo root:
 
 ```bash
-# Demo brain (default)
+# Try the demo first (no MCP needed)
+python tools/bin/brain.py try
+
+# Demo brain MCP config (default)
 python tools/bin/brain.py setup-mcp
 
 # Your brain

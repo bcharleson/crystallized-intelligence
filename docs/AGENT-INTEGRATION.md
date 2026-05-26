@@ -20,16 +20,19 @@ Agents should **bootstrap** (`seed` + `principles`) first, then **expand** only 
 git clone https://github.com/bcharleson/crystallized-intelligence
 cd crystallized-intelligence
 
-# 2. Initialize your brain (separate directory or sibling repo)
+# 2. Zero-config demo (no BRAIN_ROOT)
+python tools/bin/brain.py try
+
+# 3. Initialize your brain (separate directory or sibling repo)
 python tools/bin/brain.py init \
   --path ~/acme-brain \
   --name "Acme Brain" \
   --domains "product,engineering"
 
-# 3. Add content under ~/acme-brain/corpus/{domain}/knowledge|sources|examples
+# 4. Add content under ~/acme-brain/corpus/{domain}/knowledge|sources|examples
 #    Tag every file with source.type and quality.source_tier (see README)
 
-# 4. Crystallize + verify + freshness
+# 5. Crystallize + verify + freshness
 export BRAIN_ROOT=~/acme-brain
 python tools/bin/brain.py crystallize --domain product --local
 python tools/bin/brain.py verify --domain product
@@ -50,12 +53,20 @@ export BRAIN_ROOT=~/acme-brain
 Commands:
 
 ```bash
+# First run — human-readable demo (~560 tokens total)
+python tools/bin/brain.py try
+python tools/bin/brain.py try b2b-discovery --query qualify
+
+# Health check
+python tools/bin/brain.py doctor --brain-root examples/demo-brain
+
 # List domains
 python tools/bin/brain.py domains
 
 # ~200-2K tokens — always start here
 python tools/bin/brain.py bootstrap specialty-coffee
 python tools/bin/brain.py bootstrap b2b-discovery   # richer sales demo
+python tools/bin/brain.py bootstrap runbook-basics  # ops / runbook demo
 
 # Expand with budget + trust filter (tier 0 beats tier 4)
 python tools/bin/brain.py expand b2b-discovery --query "qualify" --max-tokens 4000 --max-tier 3

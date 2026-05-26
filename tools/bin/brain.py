@@ -21,6 +21,7 @@ Pipeline commands delegate to existing tools:
   brain freshness --domain my-domain
   brain doctor
   brain demo
+  brain try
   brain setup-mcp
 """
 
@@ -37,13 +38,38 @@ from typing import Optional, Union
 TOOLS_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
-from lib.brain_reader import BrainReader  # noqa: E402
+from lib.brain_reader import BrainReader, DomainNotFoundError  # noqa: E402
 from lib.runtime import require_python, resolve_brain_root as _resolve_brain_root  # noqa: E402
 
 require_python()
 
 BIN_DIR = Path(__file__).resolve().parent
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
+DEMO_BRAIN_ROOT = (DEFAULT_BRAIN_ROOT / "examples" / "demo-brain").resolve()
+
+WELCOME = """
+Crystallized Intelligence — layer-first knowledge for AI agents
+
+  Pre-compiled expertise in ~200–2K tokens (bootstrap), expand only when needed.
+
+  First time here?
+    python tools/bin/brain.py try              # 60-second demo, zero setup
+
+  Demo brain (no config):
+    python tools/bin/brain.py demo             # bootstrap JSON (~365 tokens)
+    python tools/bin/brain.py doctor --brain-root examples/demo-brain
+
+  Your own brain:
+    export BRAIN_ROOT=~/my-brain
+    python tools/bin/brain.py bootstrap <domain>
+    python tools/bin/brain.py expand <domain> --query "..." --max-tier 3
+
+  Commands: init, domains, bootstrap, expand, search, get, classify,
+            crystallize, verify, freshness, doctor, demo, setup-mcp, try
+
+  Run: python tools/bin/brain.py <command> --help
+  Docs: README.md · docs/AGENT-INTEGRATION.md
+"""
 
 
 def resolve_brain_root(explicit: Optional[str]) -> Path:
@@ -71,6 +97,23 @@ def ensure_brain_root(path: Path) -> Path:
         lines.append("  Set BRAIN_ROOT or pass --brain-root to your brain directory.")
     print("\n".join(lines), file=sys.stderr)
     raise SystemExit(1)
+
+
+def print_domain_error(exc: DomainNotFoundError) -> None:
+    print(f"Error: domain '{exc.domain}' not found.", file=sys.stderr)
+    if exc.available:
+        print(f"  Available domains: {', '.join(exc.available)}", file=sys.stderr)
+    else:
+        print("  No domains under corpus/. Run: brain init --path ~/my-brain ...", file=sys.stderr)
+    print("  List domains: brain domains --brain-root $BRAIN_ROOT", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def run_reader_command(reader: BrainReader, args: argparse.Namespace) -> None:
+    try:
+        args.func(reader, args)
+    except DomainNotFoundError as exc:
+        print_domain_error(exc)
 
 
 def emit(data: Union[dict, list], fmt: str) -> None:
@@ -204,18 +247,69 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     emit(report, args.format)
 
 
+def _require_demo_brain() -> Path:
+    if not (DEMO_BRAIN_ROOT / "brain.yaml").is_file():
+        print(f"Error: demo brain not found at {DEMO_BRAIN_ROOT}", file=sys.stderr)
+        raise SystemExit(1)
+    return DEMO_BRAIN_ROOT
+
+
 def cmd_demo(args: argparse.Namespace) -> None:
     """Run bootstrap against the bundled demo brain (no setup required)."""
-    demo_root = (DEFAULT_BRAIN_ROOT / "examples" / "demo-brain").resolve()
-    if not (demo_root / "brain.yaml").is_file():
-        print(f"Error: demo brain not found at {demo_root}", file=sys.stderr)
-        raise SystemExit(1)
-    reader = BrainReader(demo_root)
+    reader = BrainReader(_require_demo_brain())
     domain = args.domain or "specialty-coffee"
-    payload = reader.bootstrap(domain, include_persona=False, max_tokens=args.max_tokens)
-    payload["brain_root"] = str(demo_root)
+    try:
+        payload = reader.bootstrap(domain, include_persona=False, max_tokens=args.max_tokens)
+    except DomainNotFoundError as exc:
+        print_domain_error(exc)
+    payload["brain_root"] = str(DEMO_BRAIN_ROOT)
     payload["hint"] = "export BRAIN_ROOT=examples/demo-brain to use the demo brain for all commands"
     emit(payload, args.format)
+
+
+def _excerpt(text: str, max_len: int = 220) -> str:
+    one_line = " ".join(text.split())
+    if len(one_line) <= max_len:
+        return one_line
+    return one_line[: max_len - 3].rstrip() + "..."
+
+
+def cmd_try(args: argparse.Namespace) -> None:
+    """Human-readable 60-second demo: bootstrap + expand, zero configuration."""
+    reader = BrainReader(_require_demo_brain())
+    domain = args.domain or "specialty-coffee"
+    query = args.query or "grind"
+    try:
+        boot = reader.bootstrap(domain, max_tokens=4000)
+        expand = reader.expand(domain, query=query, max_tokens=2500, max_tier=3, max_documents=3)
+    except DomainNotFoundError as exc:
+        print_domain_error(exc)
+
+    total = boot["tokens_approx"] + expand["tokens_approx"]
+    seed = boot.get("layers", {}).get("seed", {})
+    seed_text = seed.get("content", "")
+
+    print("Crystallized Intelligence — 60-second demo")
+    print("=" * 48)
+    print()
+    print(f"Domain: {domain}  (demo brain, no BRAIN_ROOT needed)")
+    print()
+    print(f"1) bootstrap  →  {boot['tokens_approx']} tokens (crystal layers only)")
+    if seed_text:
+        print(f'   seed: "{_excerpt(seed_text)}"')
+    print()
+    print(f'2) expand --query "{query}"  →  {expand["tokens_approx"]} tokens (ranked knowledge)')
+    for doc in expand.get("documents", []):
+        print(f"   · {doc['title']}  (tier {doc['tier']}, ~{doc['tokens_approx']} tok)")
+    print()
+    print(f"Total context used: ~{total} tokens")
+    print("Naive RAG often loads dozens of files (50K–100K+ tokens) per question.")
+    print()
+    print("Next steps:")
+    print("  export BRAIN_ROOT=examples/demo-brain")
+    print("  python tools/bin/brain.py doctor")
+    print("  python tools/bin/brain.py bootstrap b2b-discovery")
+    print("  Docs: README.md")
 
 
 def cmd_setup_mcp(args: argparse.Namespace) -> None:
@@ -267,9 +361,11 @@ def main() -> None:
     )
 
     parser = argparse.ArgumentParser(
-        description="Crystallized Intelligence brain CLI (layer-first agent access)",
+        description="Layer-first access to pre-compiled domain brains for AI agents.",
+        epilog="Tip: run without a command for a quick overview, or `try` for a zero-setup demo.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command")
 
     p_init = sub.add_parser("init", help="Initialize a new brain directory", parents=[parent])
     p_init.add_argument("--path", required=True)
@@ -356,6 +452,23 @@ def main() -> None:
     p_demo.add_argument("--max-tokens", type=int, default=4000)
     p_demo.set_defaults(func=cmd_demo)
 
+    p_try = sub.add_parser(
+        "try",
+        help="Zero-setup demo: bootstrap + expand with human-readable output",
+    )
+    p_try.add_argument(
+        "domain",
+        nargs="?",
+        default="specialty-coffee",
+        help="Demo domain (default: specialty-coffee)",
+    )
+    p_try.add_argument(
+        "--query",
+        default="grind",
+        help='Keyword for expand step (default: "grind")',
+    )
+    p_try.set_defaults(func=cmd_try)
+
     p_mcp = sub.add_parser(
         "setup-mcp",
         help="Print MCP server config JSON with absolute paths",
@@ -373,7 +486,12 @@ def main() -> None:
     p_mcp.set_defaults(func=cmd_setup_mcp)
 
     args = parser.parse_args()
-    brain_root = resolve_brain_root(args.brain_root)
+
+    if not args.command:
+        print(WELCOME.strip())
+        raise SystemExit(0)
+
+    brain_root = resolve_brain_root(getattr(args, "brain_root", None))
 
     if args.command == "init":
         cmd_init(args)
@@ -385,6 +503,10 @@ def main() -> None:
 
     if args.command == "demo":
         cmd_demo(args)
+        return
+
+    if args.command == "try":
+        cmd_try(args)
         return
 
     if args.command == "setup-mcp":
@@ -422,7 +544,7 @@ def main() -> None:
 
     ensure_brain_root(brain_root)
     reader = BrainReader(brain_root)
-    args.func(reader, args)
+    run_reader_command(reader, args)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,10 @@ brain:
       name: "B2B Discovery"
       description: "Synthetic sales fundamentals — ICP, qualification, discovery"
       maturity: demo
+    - id: runbook-basics
+      name: "Runbook Basics"
+      description: "Operational runbooks — triage, mitigation, escalation patterns"
+      maturity: demo
 
   quality:
     source_weights:
