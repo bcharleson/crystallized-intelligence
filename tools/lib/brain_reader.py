@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 SOURCE_TIER: dict[str, int] = {
     "first_party": 0,
@@ -61,7 +62,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
     fm_raw, body = match.group(1), match.group(2)
     fm: dict = {}
-    section: str | None = None
+    section: Optional[str] = None
     for line in fm_raw.split("\n"):
         section_match = re.match(r"^(\w+):\s*$", line)
         if section_match:
@@ -175,7 +176,7 @@ class BrainReader:
             return "examples"
         return "knowledge"
 
-    def _load_file(self, domain_dir: Path, rel: Path) -> BrainDocument | None:
+    def _load_file(self, domain_dir: Path, rel: Path) -> Optional[BrainDocument]:
         fpath = domain_dir / rel
         if not fpath.is_file() or fpath.suffix not in (".md", ".txt"):
             return None
@@ -266,7 +267,7 @@ class BrainReader:
                 docs.append(doc)
         return docs
 
-    def _rank_docs(self, docs: list[BrainDocument], query: str | None) -> list[BrainDocument]:
+    def _rank_docs(self, docs: list[BrainDocument], query: Optional[str]) -> list[BrainDocument]:
         q = (query or "").lower().strip()
         for doc in docs:
             score = 0.0
@@ -288,7 +289,7 @@ class BrainReader:
         domain: str,
         *,
         layer: str = "knowledge",
-        query: str | None = None,
+        query: Optional[str] = None,
         max_tokens: int = 8000,
         max_tier: int = 5,
         max_documents: int = 10,

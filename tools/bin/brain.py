@@ -29,6 +29,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional, Union
 
 TOOLS_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS_ROOT))
@@ -42,7 +43,7 @@ BIN_DIR = Path(__file__).resolve().parent
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
-def resolve_brain_root(explicit: str | None) -> Path:
+def resolve_brain_root(explicit: Optional[str]) -> Path:
     if explicit:
         return Path(explicit).expanduser().resolve()
     env = os.environ.get("BRAIN_ROOT", "").strip()
@@ -73,7 +74,7 @@ def ensure_brain_root(path: Path) -> Path:
     raise SystemExit(1)
 
 
-def emit(data: dict | list, fmt: str) -> None:
+def emit(data: Union[dict, list], fmt: str) -> None:
     if fmt == "json":
         print(json.dumps(data, indent=2))
     else:

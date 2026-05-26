@@ -68,7 +68,9 @@ A Skill says "run the pour-over checklist and format the output." A Brain contai
 
 ## Quick Start
 
-**Requirements:** **Python 3.10+** (required — tools exit with a clear error on 3.9). No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, the tool generates templates for manual editing.
+**Requirements:** **Python 3.9+** (stdlib-only core tools; tested on 3.9, 3.10, and 3.12 in CI). No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, the tool generates templates for manual editing.
+
+On macOS, the system `python3` may be older than 3.9 — use `python3.10` from Homebrew or [python.org](https://www.python.org/downloads/) if commands exit with a version error.
 
 ```bash
 # 1. Clone

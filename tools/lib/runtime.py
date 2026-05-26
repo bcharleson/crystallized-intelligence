@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-MIN_PYTHON = (3, 10)
+MIN_PYTHON = (3, 9)
 
 
 def require_python(min_version: tuple[int, int] = MIN_PYTHON) -> None:
@@ -15,6 +15,6 @@ def require_python(min_version: tuple[int, int] = MIN_PYTHON) -> None:
     found = f"{sys.version_info.major}.{sys.version_info.minor}"
     sys.stderr.write(
         f"Error: Python {major}.{minor}+ required (found {found}).\n"
-        f"See README.md — core tools use modern type syntax and require 3.10+.\n"
+        f"See README.md — core tools require Python {major}.{minor}+.\n"
     )
     raise SystemExit(1)

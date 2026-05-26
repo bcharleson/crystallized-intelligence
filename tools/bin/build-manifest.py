@@ -3,7 +3,7 @@
 Generate MANIFEST.md — an auto-generated index of a brain repository.
 Agents and humans can scan this to find relevant content quickly.
 
-Requires Python 3.10+ (see README.md).
+Requires Python 3.9+ (see README.md).
 """
 
 import argparse

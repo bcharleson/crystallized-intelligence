@@ -16,7 +16,7 @@ Usage:
   python tools/bin/classify.py --all --brain-root ~/my-brain
   python tools/bin/classify.py --all --dry-run               # Preview changes
 
-Requires Python 3.10+ (see README.md).
+Requires Python 3.9+ (see README.md).
 """
 
 import argparse

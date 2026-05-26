@@ -24,7 +24,7 @@ Usage:
 Requires: ANTHROPIC_API_KEY environment variable for full crystallization.
 Without it, generates templates for manual editing.
 
-Requires Python 3.10+ (see README.md).
+Requires Python 3.9+ (see README.md).
 """
 
 import argparse

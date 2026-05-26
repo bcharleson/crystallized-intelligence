@@ -20,7 +20,7 @@ Usage:
 
 Uses only Python stdlib — no pip dependencies.
 
-Requires Python 3.10+ (see README.md).
+Requires Python 3.9+ (see README.md).
 """
 
 import argparse

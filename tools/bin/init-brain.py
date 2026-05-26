@@ -6,7 +6,7 @@ Usage:
   python tools/bin/init-brain.py --path /tmp/my-brain --name "My Brain" --domains "sales,ops"
   python tools/bin/init-brain.py --path /tmp/my-brain --name "Coffee Brain" --domains "specialty-coffee"
 
-Requires Python 3.10+ (see README.md).
+Requires Python 3.9+ (see README.md).
 """
 
 import argparse
