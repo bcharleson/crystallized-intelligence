@@ -29,10 +29,11 @@ python tools/bin/brain.py init \
 # 3. Add content under ~/acme-brain/corpus/{domain}/knowledge|sources|examples
 #    Tag every file with source.type and quality.source_tier (see README)
 
-# 4. Crystallize + verify
+# 4. Crystallize + verify + freshness
 export BRAIN_ROOT=~/acme-brain
 python tools/bin/brain.py crystallize --domain product --local
 python tools/bin/brain.py verify --domain product
+python tools/bin/brain.py freshness --domain product
 ```
 
 Point `BRAIN_ROOT` at your brain forever after — typically a separate directory or sibling repo from this framework clone.

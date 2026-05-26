@@ -5,12 +5,21 @@ Initialize a new brain directory from the public framework template.
 Usage:
   python tools/bin/init-brain.py --path /tmp/my-brain --name "My Brain" --domains "sales,ops"
   python tools/bin/init-brain.py --path /tmp/my-brain --name "Coffee Brain" --domains "specialty-coffee"
+
+Requires Python 3.10+ (see README.md).
 """
 
 import argparse
 import shutil
 import sys
 from pathlib import Path
+
+_TOOLS = Path(__file__).resolve().parent.parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent.parent

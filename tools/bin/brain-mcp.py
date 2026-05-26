@@ -28,6 +28,9 @@ TOOLS_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
 from lib.brain_reader import BrainReader  # noqa: E402
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 try:
     from mcp.server.fastmcp import FastMCP

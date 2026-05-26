@@ -15,6 +15,8 @@ Usage:
   python tools/bin/classify.py --domain my-domain --brain-root ~/my-brain
   python tools/bin/classify.py --all --brain-root ~/my-brain
   python tools/bin/classify.py --all --dry-run               # Preview changes
+
+Requires Python 3.10+ (see README.md).
 """
 
 import argparse
@@ -22,6 +24,13 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+
+_TOOLS = Path(__file__).resolve().parent.parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 BRAIN_ROOT = DEFAULT_BRAIN_ROOT

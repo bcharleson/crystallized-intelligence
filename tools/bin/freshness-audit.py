@@ -19,6 +19,8 @@ Usage:
   python tools/bin/freshness-audit.py --all --format markdown > freshness-report.md
 
 Uses only Python stdlib — no pip dependencies.
+
+Requires Python 3.10+ (see README.md).
 """
 
 import argparse
@@ -26,6 +28,14 @@ import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Optional
+
+_TOOLS = Path(__file__).resolve().parent.parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 BRAIN_ROOT = DEFAULT_BRAIN_ROOT
@@ -95,7 +105,7 @@ def parse_frontmatter(filepath: Path) -> dict:
     return fm
 
 
-def parse_date(date_str: str) -> date | None:
+def parse_date(date_str: str) -> Optional[date]:
     """Parse a date string (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)."""
     if not date_str:
         return None
@@ -110,7 +120,7 @@ def parse_date(date_str: str) -> date | None:
     return None
 
 
-def get_document_date(fm: dict) -> date | None:
+def get_document_date(fm: dict) -> Optional[date]:
     """Get the most recent date from frontmatter (updated > created > date)."""
     for field in ("updated", "created", "date"):
         d = parse_date(fm.get(field, ""))

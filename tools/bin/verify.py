@@ -19,6 +19,8 @@ Usage:
   python tools/bin/verify.py --all --strict     # Exit 1 on any warning
 
 Uses only Python stdlib — no pip dependencies.
+
+Requires Python 3.10+ (see README.md).
 """
 
 import argparse
@@ -27,6 +29,13 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+_TOOLS = Path(__file__).resolve().parent.parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 BRAIN_ROOT = DEFAULT_BRAIN_ROOT

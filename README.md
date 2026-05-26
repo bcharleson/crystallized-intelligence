@@ -68,7 +68,7 @@ A Skill says "run the pour-over checklist and format the output." A Brain contai
 
 ## Quick Start
 
-**Requirements:** Python 3.10+. No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, the tool generates templates for manual editing.
+**Requirements:** **Python 3.10+** (required — tools exit with a clear error on 3.9). No pip installs needed for core tools. An `ANTHROPIC_API_KEY` is optional — without it, the tool generates templates for manual editing.
 
 ```bash
 # 1. Clone
@@ -76,10 +76,12 @@ git clone https://github.com/bcharleson/crystallized-intelligence
 cd crystallized-intelligence
 
 # 2. Try the demo brain (no API key needed)
-python tools/bin/crystallize.py --brain-root examples/demo-brain --domain specialty-coffee --local
+export BRAIN_ROOT=examples/demo-brain
+python tools/bin/brain.py bootstrap specialty-coffee
+python tools/bin/brain.py expand specialty-coffee --query "grind" --max-tier 3
 ```
 
-You will see the crystal layers generated for the `specialty-coffee` demo domain. Open `examples/demo-brain/corpus/specialty-coffee/_crystal/` to see `seed.md`, `principles.md`, `graph.yaml`, and `persona.md`.
+You can also run `python tools/bin/crystallize.py --brain-root examples/demo-brain --domain specialty-coffee --local` to regenerate crystal templates. Open `examples/demo-brain/corpus/specialty-coffee/_crystal/` to inspect `seed.md`, `principles.md`, `graph.yaml`, and `persona.md`.
 
 ---
 
@@ -87,7 +89,7 @@ You will see the crystal layers generated for the `specialty-coffee` demo domain
 
 ```bash
 # 3. Initialize a new brain
-python tools/bin/init-brain.py --path ~/my-brain --name "My Brain" --domains "my-domain"
+python tools/bin/brain.py init --path ~/my-brain --name "My Brain" --domains "my-domain"
 
 # 4. Add knowledge
 # Drop files into ~/my-brain/corpus/my-domain/knowledge/
@@ -359,25 +361,26 @@ Use this loop when building or extending a brain — human or agent:
 ```bash
 BRAIN=~/my-brain
 DOMAIN=my-domain
+export BRAIN_ROOT="$BRAIN"
 
 # 1. Scaffold (once)
-python tools/bin/init-brain.py --path "$BRAIN" --name "My Brain" --domains "$DOMAIN"
+python tools/bin/brain.py init --path "$BRAIN" --name "My Brain" --domains "$DOMAIN"
 
 # 2. Add content with frontmatter (knowledge/, sources/, examples/)
 #    Tag source.type, tier, and author_authority on every file that matters.
 
 # 3. Audit classification
-python tools/bin/classify.py --domain "$DOMAIN" --summary --brain-root "$BRAIN"
+python tools/bin/brain.py classify --domain "$DOMAIN" --summary
 
 # 4. Crystallize distilled layers
-python tools/bin/crystallize.py --brain-root "$BRAIN" --domain "$DOMAIN" --local
+python tools/bin/brain.py crystallize --domain "$DOMAIN" --local
 
 # 5. Quality gates
-python tools/bin/freshness-audit.py --domain "$DOMAIN" --brain-root "$BRAIN"
-python tools/bin/verify.py --domain "$DOMAIN" --brain-root "$BRAIN"
+python tools/bin/brain.py freshness --domain "$DOMAIN"
+python tools/bin/brain.py verify --domain "$DOMAIN"
 ```
 
-**Agent maintainers:** when ingesting a YouTube transcript, book summary, or internal doc, always write frontmatter first, run `classify.py` to validate the tier, then place the file in the correct directory (`sources/` for raw captures, `knowledge/` for curated writeups).
+**Agent maintainers:** when ingesting a YouTube transcript, book summary, or internal doc, always write frontmatter first, run `brain classify` (or `classify.py`) to validate the tier, then place the file in the correct directory (`sources/` for raw captures, `knowledge/` for curated writeups).
 
 ---
 
@@ -439,7 +442,7 @@ freshness_sensitivity: medium  # 180 days — moderate velocity (default)
 freshness_sensitivity: low     # 365 days — stable, evergreen domains
 ```
 
-Run `python tools/bin/freshness-audit.py --domain my-domain --brain-root ~/my-brain` to surface stale documents before they mislead an agent.
+Run `python tools/bin/brain.py freshness --domain my-domain --brain-root ~/my-brain` to surface stale documents before they mislead an agent.
 
 ---
 
@@ -449,13 +452,13 @@ All corpus tools accept `--brain-root` pointing at a brain directory (the folder
 
 | Tool | What it does |
 |---|---|
-| `init-brain.py` | Scaffold a new brain with correct directory structure |
-| `crystallize.py` | Distill domain knowledge into seed, principles, persona, graph |
+| **`brain.py`** | **Primary entrypoint** — retrieval (`bootstrap`, `expand`, `search`, `get`, `domains`) plus `init`, `classify`, `crystallize`, `verify`, `freshness` |
+| `crystallize.py` | Distill domain knowledge into seed, principles, persona, graph (also via `brain crystallize`) |
 | `classify.py` | Preview suggested tiers and metadata from `source.type` and path heuristics |
-| `freshness-audit.py` | Flag documents approaching or past their stale threshold |
+| `freshness-audit.py` | Flag documents approaching or past their stale threshold (also via `brain freshness`) |
 | `verify.py` | Quality gate — checks frontmatter, deduplication, and safety (no PII/secrets) |
+| `init-brain.py` | Scaffold a new brain (also via `brain init`) |
 | `build-manifest.py` | Generate a `MANIFEST.md` index of all content in the brain |
-| `brain.py` | **Agent CLI** — `bootstrap`, `expand`, `search`, `get` with token budgets |
 | `brain-mcp.py` | **Local MCP server** — same retrieval for Cursor / Claude Desktop |
 
 Example against the demo brain:

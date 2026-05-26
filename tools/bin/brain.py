@@ -18,6 +18,7 @@ Pipeline commands delegate to existing tools:
   brain classify --domain my-domain
   brain crystallize --domain my-domain --local
   brain verify --domain my-domain
+  brain freshness --domain my-domain
 """
 
 from __future__ import annotations
@@ -33,6 +34,9 @@ TOOLS_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
 from lib.brain_reader import BrainReader  # noqa: E402
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 BIN_DIR = Path(__file__).resolve().parent
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -45,6 +49,28 @@ def resolve_brain_root(explicit: str | None) -> Path:
     if env:
         return Path(env).expanduser().resolve()
     return DEFAULT_BRAIN_ROOT
+
+
+def ensure_brain_root(path: Path) -> Path:
+    """Fail fast when BRAIN_ROOT does not look like a brain directory."""
+    brain_yaml = path / "brain.yaml"
+    corpus = path / "corpus"
+    if brain_yaml.is_file() and corpus.is_dir():
+        return path
+
+    lines = [f"Error: brain not found at {path}", "  Expected brain.yaml and corpus/ under BRAIN_ROOT."]
+    if not os.environ.get("BRAIN_ROOT") and path.resolve() == DEFAULT_BRAIN_ROOT.resolve():
+        lines.extend(
+            [
+                "  The framework repo root is not a brain.",
+                "  Try: export BRAIN_ROOT=examples/demo-brain",
+                "  Or:  python tools/bin/brain.py bootstrap specialty-coffee --brain-root examples/demo-brain",
+            ]
+        )
+    else:
+        lines.append("  Set BRAIN_ROOT or pass --brain-root to your brain directory.")
+    print("\n".join(lines), file=sys.stderr)
+    raise SystemExit(1)
 
 
 def emit(data: dict | list, fmt: str) -> None:
@@ -196,6 +222,12 @@ def main() -> None:
     p_verify = sub.add_parser("verify", help="Run verify.py on a domain", parents=[parent])
     p_verify.add_argument("--domain", required=True)
 
+    p_fresh = sub.add_parser(
+        "freshness", help="Run freshness-audit.py on a domain", parents=[parent]
+    )
+    p_fresh.add_argument("--domain", required=True)
+    p_fresh.add_argument("--stale-only", action="store_true")
+
     args = parser.parse_args()
     brain_root = resolve_brain_root(args.brain_root)
 
@@ -204,19 +236,31 @@ def main() -> None:
         return
 
     if args.command == "classify":
+        ensure_brain_root(brain_root)
         extra = ["--domain", args.domain] + (["--summary"] if args.summary else [])
         _delegate_tool("classify", brain_root, extra)
         return
 
     if args.command == "crystallize":
+        ensure_brain_root(brain_root)
         extra = ["--domain", args.domain] + (["--local"] if args.local else [])
         _delegate_tool("crystallize", brain_root, extra)
         return
 
     if args.command == "verify":
+        ensure_brain_root(brain_root)
         _delegate_tool("verify", brain_root, ["--domain", args.domain])
         return
 
+    if args.command == "freshness":
+        ensure_brain_root(brain_root)
+        extra = ["--domain", args.domain]
+        if args.stale_only:
+            extra.append("--stale-only")
+        _delegate_tool("freshness-audit", brain_root, extra)
+        return
+
+    ensure_brain_root(brain_root)
     reader = BrainReader(brain_root)
     args.func(reader, args)
 

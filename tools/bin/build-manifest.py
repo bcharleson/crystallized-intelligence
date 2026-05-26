@@ -2,12 +2,23 @@
 """
 Generate MANIFEST.md — an auto-generated index of a brain repository.
 Agents and humans can scan this to find relevant content quickly.
+
+Requires Python 3.10+ (see README.md).
 """
 
 import argparse
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
+
+_TOOLS = Path(__file__).resolve().parent.parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+from lib.runtime import require_python  # noqa: E402
+
+require_python()
 
 DEFAULT_BRAIN_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -42,7 +53,7 @@ def format_size(size_bytes: int) -> str:
         return f"{size_bytes / (1024 * 1024):.1f}M"
 
 
-def resolve_brain_root(explicit: str | None) -> Path:
+def resolve_brain_root(explicit: Optional[str]) -> Path:
     if explicit:
         return Path(explicit).expanduser().resolve()
     env = os.environ.get("BRAIN_ROOT")
